@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
+import { usePwaInstall } from '@/composables/usePwaInstall'
 
 const route = useRoute()
 const router = useRouter()
+const { canInstall, install } = usePwaInstall()
 
 const navItems = computed(() => [
   { name: 'Today', to: '/' },
@@ -22,6 +24,14 @@ function isActive(path: string) {
     <header class="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-sm">
       <div class="mx-auto flex w-full max-w-md items-center justify-between px-4 py-3">
         <h1 class="text-lg font-semibold">Productivity</h1>
+        <button
+          v-if="canInstall"
+          type="button"
+          class="rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+          @click="install"
+        >
+          Install app
+        </button>
         <slot name="header-actions" />
       </div>
     </header>

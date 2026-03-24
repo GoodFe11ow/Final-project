@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,18 +38,28 @@ const headerTitle = computed(() => String(route.meta.title ?? 'Productivity'))
         >
         </button>
         <h1 class="text-lg font-semibold">{{ headerTitle }}</h1>
-        <button
-          type="button"
-          aria-label="Open settings"
-          class="flex h-8 w-8 items-center justify-center rounded-md border border-input text-lg leading-none hover:bg-muted"
-          @click="router.push('/settings')"
-        >
-          <span class="flex flex-col items-center justify-center gap-0.5" aria-hidden="true">
-            <span class="h-1 w-1 rounded-full bg-current"></span>
-            <span class="h-1 w-1 rounded-full bg-current"></span>
-            <span class="h-1 w-1 rounded-full bg-current"></span>
-          </span>
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              class="shrink-0"
+              aria-label="Open menu"
+            >
+              <span class="flex flex-col items-center justify-center gap-0.5" aria-hidden="true">
+                <span class="h-1 w-1 rounded-full bg-current" />
+                <span class="h-1 w-1 rounded-full bg-current" />
+                <span class="h-1 w-1 rounded-full bg-current" />
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" class="w-40">
+            <DropdownMenuItem @select="router.push('/settings')">
+              Settings
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
 

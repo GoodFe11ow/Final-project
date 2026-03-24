@@ -5,12 +5,9 @@ import AppShell from '@/components/layout/AppShell.vue'
 <template>
   <AppShell>
     <section class="flex flex-1 flex-col gap-4">
-      <header>
-        <h2 class="text-xl font-semibold">Stats</h2>
-        <p class="text-sm text-muted-foreground">
-          Placeholder for focus time, completed tasks and streaks.
-        </p>
-      </header>
+      <p class="text-sm text-muted-foreground">
+        Placeholder for focus time, completed tasks and streaks.
+      </p>
 
       <div class="grid grid-cols-2 gap-3">
         <div class="rounded-lg border bg-card p-3 text-card-foreground shadow-sm">

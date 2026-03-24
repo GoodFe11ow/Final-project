@@ -5,12 +5,9 @@ import AppShell from '@/components/layout/AppShell.vue'
 <template>
   <AppShell>
     <section class="flex flex-1 flex-col gap-4">
-      <header>
-        <h2 class="text-xl font-semibold">Focus</h2>
-        <p class="text-sm text-muted-foreground">
-          Placeholder for focus timer, sessions and breaks.
-        </p>
-      </header>
+      <p class="text-sm text-muted-foreground">
+        Placeholder for focus timer, sessions and breaks.
+      </p>
 
       <div
         class="flex flex-col items-center gap-4 rounded-lg border bg-card p-6 text-card-foreground shadow-sm"

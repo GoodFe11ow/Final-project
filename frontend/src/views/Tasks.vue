@@ -5,12 +5,9 @@ import AppShell from '@/components/layout/AppShell.vue'
 <template>
   <AppShell>
     <section class="flex flex-1 flex-col gap-4">
-      <header class="flex flex-col gap-2">
-        <h2 class="text-xl font-semibold">Tasks</h2>
-        <p class="text-sm text-muted-foreground">
-          Placeholder for your task lists, filters and quick add.
-        </p>
-      </header>
+      <p class="text-sm text-muted-foreground">
+        Placeholder for your task lists, filters and quick add.
+      </p>
 
       <div class="rounded-lg border bg-card p-3 text-card-foreground shadow-sm">
         <form class="flex items-center gap-2">

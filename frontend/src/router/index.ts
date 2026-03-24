@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Today from '@/views/Today.vue'
+import Home from '@/views/Home.vue'
 import Tasks from '@/views/Tasks.vue'
 import Focus from '@/views/Focus.vue'
+import Calendar from '@/views/Calendar.vue'
+import Settings from '@/views/Settings.vue'
 import Stats from '@/views/Stats.vue'
 
 declare module 'vue-router' {
@@ -11,9 +13,11 @@ declare module 'vue-router' {
 }
 
 const routes = [
-  { path: '/', component: Today, meta: { title: 'Today' } },
-  { path: '/tasks', component: Tasks, meta: { title: 'Tasks' } },
+  { path: '/', component: Home, meta: { title: 'Home' } },
   { path: '/focus', component: Focus, meta: { title: 'Focus' } },
+  { path: '/tasks', component: Tasks, meta: { title: 'Tasks' } },
+  { path: '/calendar', component: Calendar, meta: { title: 'Calendar' } },
+  { path: '/settings', component: Settings, meta: { title: 'Settings' } },
   { path: '/stats', component: Stats, meta: { title: 'Stats' } },
 ]
 

@@ -1,38 +1,48 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
-import { usePwaInstall } from '@/composables/usePwaInstall'
 
 const route = useRoute()
 const router = useRouter()
-const { canInstall, install } = usePwaInstall()
 
 const navItems = computed(() => [
-  { name: 'Today', to: '/' },
-  { name: 'Tasks', to: '/tasks' },
+  { name: 'Home', to: '/' },
   { name: 'Focus', to: '/focus' },
-  { name: 'Stats', to: '/stats' },
+  { name: 'Tasks', to: '/tasks' },
+  { name: 'Calendar', to: '/calendar' },
 ])
 
 function isActive(path: string) {
   return route.path === path
 }
+
+const headerTitle = computed(() => String(route.meta.title ?? 'Productivity'))
 </script>
 
 <template>
   <div class="flex min-h-svh flex-col bg-background text-foreground">
     <header class="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-sm">
       <div class="mx-auto flex w-full max-w-md items-center justify-between px-4 py-3">
-        <h1 class="text-lg font-semibold">Productivity</h1>
         <button
-          v-if="canInstall"
           type="button"
-          class="rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
-          @click="install"
+          aria-label="Go to home"
+          class="h-8 w-8"
+          @click="router.push('/')"
         >
-          Install app
         </button>
-        <slot name="header-actions" />
+        <h1 class="text-lg font-semibold">{{ headerTitle }}</h1>
+        <button
+          type="button"
+          aria-label="Open settings"
+          class="flex h-8 w-8 items-center justify-center rounded-md border border-input text-lg leading-none hover:bg-muted"
+          @click="router.push('/settings')"
+        >
+          <span class="flex flex-col items-center justify-center gap-0.5" aria-hidden="true">
+            <span class="h-1 w-1 rounded-full bg-current"></span>
+            <span class="h-1 w-1 rounded-full bg-current"></span>
+            <span class="h-1 w-1 rounded-full bg-current"></span>
+          </span>
+        </button>
       </div>
     </header>
 

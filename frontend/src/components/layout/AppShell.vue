@@ -24,19 +24,24 @@ function isActive(path: string) {
 }
 
 const headerTitle = computed(() => String(route.meta.title ?? 'Productivity'))
+const isHomeRoute = computed(() => route.path === '/')
 </script>
 
 <template>
   <div class="flex min-h-svh flex-col bg-background text-foreground">
     <header class="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-sm">
       <div class="mx-auto flex w-full max-w-md items-center justify-between px-4 py-3">
-        <button
+        <Button
+          v-if="isHomeRoute"
           type="button"
-          aria-label="Go to home"
-          class="h-8 w-8"
-          @click="router.push('/')"
+          variant="ghost"
+          size="sm"
+          class="px-2 text-xs"
+          @click="router.push('/welcome')"
         >
-        </button>
+          Выйти
+        </Button>
+        <span v-else class="inline-block h-8 w-12" aria-hidden="true" />
         <h1 class="text-lg font-semibold">{{ headerTitle }}</h1>
         <DropdownMenu>
           <DropdownMenuTrigger as-child>

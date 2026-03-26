@@ -5,6 +5,9 @@ import Focus from '@/views/Focus.vue'
 import Calendar from '@/views/Calendar.vue'
 import Settings from '@/views/Settings.vue'
 import Stats from '@/views/Stats.vue'
+import Welcome from '@/views/Welcome.vue'
+import Login from '@/views/Login.vue'
+import Register from '@/views/Register.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -13,6 +16,9 @@ declare module 'vue-router' {
 }
 
 const routes = [
+  { path: '/welcome', component: Welcome, meta: { title: 'Welcome' } },
+  { path: '/login', component: Login, meta: { title: 'Log in' } },
+  { path: '/register', component: Register, meta: { title: 'Sign up' } },
   { path: '/', component: Home, meta: { title: 'Home' } },
   { path: '/focus', component: Focus, meta: { title: 'Focus' } },
   { path: '/tasks', component: Tasks, meta: { title: 'Tasks' } },

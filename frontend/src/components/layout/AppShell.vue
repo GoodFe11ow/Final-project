@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
+import { CalendarDays, House, ListChecks, TimerReset } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,10 +14,10 @@ const route = useRoute()
 const router = useRouter()
 
 const navItems = computed(() => [
-  { name: 'Home', to: '/' },
-  { name: 'Focus', to: '/focus' },
-  { name: 'Tasks', to: '/tasks' },
-  { name: 'Calendar', to: '/calendar' },
+  { name: 'Home', to: '/', icon: House },
+  { name: 'Focus', to: '/focus', icon: TimerReset },
+  { name: 'Tasks', to: '/tasks', icon: ListChecks },
+  { name: 'Calendar', to: '/calendar', icon: CalendarDays },
 ])
 
 function isActive(path: string) {
@@ -78,24 +79,23 @@ const isHomeRoute = computed(() => route.path === '/')
       class="sticky bottom-0 z-10 border-t bg-background/90 backdrop-blur-sm"
       aria-label="Main navigation"
     >
-      <div class="mx-auto flex w-full max-w-md items-center justify-between px-2 py-2">
+      <div class="mx-auto flex h-[3.9rem] w-full max-w-md items-center justify-between px-2 py-2">
         <button
           v-for="item in navItems"
           :key="item.to"
           type="button"
-          class="flex flex-1 flex-col items-center gap-0.5 rounded-md px-2 py-1 text-[11px] font-medium"
+          class="flex h-full flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 text-[0.68rem] font-medium uppercase tracking-[0.04em] transition-colors"
           :class="
             isActive(item.to)
-              ? 'text-primary'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'text-blue-500'
+              : 'text-slate-400 hover:text-slate-600'
           "
           @click="router.push(item.to)"
         >
-          <span class="h-1.5 w-1.5 rounded-full" :class="isActive(item.to) ? 'bg-primary' : 'bg-transparent'" />
+          <component :is="item.icon" class="size-[1.15rem] stroke-[1.9]" />
           <span>{{ item.name }}</span>
         </button>
       </div>
     </nav>
   </div>
 </template>
-

@@ -47,7 +47,7 @@ const modes: FocusMode[] = [
     id: 'focus',
     label: 'Focus',
     icon: TimerReset,
-    durationMs: 1 * 60 * 1000,
+    durationMs: 0.1 * 60 * 1000,
     idleSubtitle: 'Stay in Shape',
     sessionBadge: 'Deep Work Mode',
     quote: '"Concentrate all your thoughts upon the work in hand."',
@@ -56,7 +56,7 @@ const modes: FocusMode[] = [
     id: 'short-break',
     label: 'Short Break',
     icon: Coffee,
-    durationMs: 5 * 60 * 1000,
+    durationMs: 0.2 * 60 * 1000,
     idleSubtitle: 'Reset Your Energy',
     sessionBadge: 'Recovery Mode',
     quote: '"A short reset helps the next focus block feel lighter."',
@@ -78,6 +78,9 @@ const sessionSummary = ref<SessionSummary | null>(null)
 
 const currentMode = computed(() => getModeConfig(selectedMode.value))
 const currentTask = computed(() => demoTasks[taskIndex.value] ?? demoTasks[0] ?? 'Focus session')
+const hideAppChrome = computed(() => {
+  return timerState.value === 'running' || timerState.value === 'paused'
+})
 
 const elapsedMs = computed(() => {
   if (timerState.value === 'completed' && sessionSummary.value) {
@@ -94,7 +97,7 @@ const progressRatio = computed(() => {
 })
 
 const progressOffset = computed(() => {
-  return circleCircumference * (1 - progressRatio.value)
+  return circleCircumference * progressRatio.value
 })
 
 const headerText = computed(() => {
@@ -287,7 +290,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <AppShell>
+  <AppShell :chrome-hidden="hideAppChrome">
     <section class="flex flex-1 flex-col gap-6 pb-2 pt-3">
       <header class="space-y-3 px-1 pt-1 text-center">
         <h2 class="text-[2.05rem] font-semibold uppercase tracking-[0.2em] text-slate-900">

@@ -12,10 +12,10 @@ import {
   ArrowLeft,
   CalendarDays,
   Check,
-  ClipboardList,
-  GripVertical,
+  Circle,
   Pencil,
   Plus,
+  Trash2,
   X,
 } from 'lucide-vue-next'
 import {
@@ -77,6 +77,14 @@ const formattedAssignedDate = computed(() => {
 })
 
 const canSubmitForm = computed(() => taskForm.title.trim().length > 0)
+
+function createDraftSubtaskId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `draft-subtask-${crypto.randomUUID()}`
+  }
+
+  return `draft-subtask-${Math.random().toString(36).slice(2, 10)}`
+}
 
 function createEmptyTaskForm(): TaskFormState {
   return {
@@ -149,8 +157,13 @@ function closeDialog() {
 
 function addSubtaskField() {
   taskForm.subtasks.push({
+    id: createDraftSubtaskId(),
     title: '',
   })
+}
+
+function removeSubtaskField(index: number) {
+  taskForm.subtasks.splice(index, 1)
 }
 
 function openTaskDetails(taskId: string) {
@@ -192,6 +205,13 @@ function markSelectedTaskComplete() {
   tasksStore.markTaskComplete(selectedTask.value.id)
 }
 
+function deleteSelectedTask() {
+  if (!selectedTask.value) return
+
+  tasksStore.deleteTask(selectedTask.value.id)
+  selectedTaskId.value = null
+}
+
 function progressMessage(task: TaskItem) {
   const progress = getTaskProgress(task)
 
@@ -214,31 +234,24 @@ function progressMessage(task: TaskItem) {
         </header>
 
         <div v-if="sortedTasks.length === 0" class="flex flex-1 items-center">
-          <Card
-            class="w-full rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(15,23,42,0.18)]"
-          >
-            <CardContent class="flex flex-col items-center px-6 py-10 text-center">
-              <span
-                class="mb-5 flex size-16 items-center justify-center rounded-full bg-blue-50 text-blue-500"
-              >
-                <ClipboardList class="size-8" />
-              </span>
-              <h3 class="text-2xl font-semibold tracking-[-0.03em] text-slate-900">
-                No tasks yet
-              </h3>
-              <p class="mt-3 max-w-[15rem] text-sm leading-6 text-slate-400">
-                Create your first task to start tracking progress, subtasks, and future calendar dates.
-              </p>
-              <Button
-                type="button"
-                class="mt-8 h-14 rounded-[1.1rem] bg-blue-500 px-8 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-                @click="openCreateDialog"
-              >
-                <Plus class="size-4" />
-                Add New Task
-              </Button>
-            </CardContent>
-          </Card>
+          <div class="flex w-full flex-1 flex-col items-center justify-center px-6 text-center">
+            <div
+              class="flex size-20 items-center justify-center rounded-full border-[3px] border-blue-400 text-blue-500"
+            >
+              <Check class="size-10 stroke-[2.4]" />
+            </div>
+            <p class="mt-8 max-w-[15.5rem] text-[1.1rem] font-medium leading-8 text-slate-600">
+              No tasks yet. Start your journey by creating your first task.
+            </p>
+            <Button
+              type="button"
+              class="mt-16 h-14 rounded-[1.1rem] bg-blue-500 px-8 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
+              @click="openCreateDialog"
+            >
+              <Plus class="size-4" />
+              Add New Task
+            </Button>
+          </div>
         </div>
 
         <div v-else class="flex flex-1 flex-col gap-4">
@@ -403,6 +416,16 @@ function progressMessage(task: TaskItem) {
         >
           {{ selectedTask.completed ? 'Task Completed' : 'Mark as Complete' }}
         </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          class="h-14 rounded-[1.2rem] border-red-200 bg-white text-base font-semibold text-red-500 shadow-[0_16px_28px_-24px_rgba(239,68,68,0.45)] hover:bg-red-50 hover:text-red-600"
+          @click="deleteSelectedTask"
+        >
+          <Trash2 class="size-4" />
+          Delete Task
+        </Button>
       </template>
 
       <Dialog v-model:open="isDialogOpen">
@@ -469,15 +492,27 @@ function progressMessage(task: TaskItem) {
                   <div
                     v-for="(subtask, index) in taskForm.subtasks"
                     :key="subtask.id ?? `subtask-${index}`"
-                    class="flex items-center gap-3 rounded-xl bg-[#f4f6ff] px-3 py-2.5"
+                    class="flex items-center gap-3 rounded-xl bg-[#f4f6ff] px-3 py-2.5 transition-shadow"
                   >
-                    <GripVertical class="size-4 shrink-0 text-slate-400" />
+                    <span class="flex shrink-0 items-center text-slate-300">
+                      <Circle class="size-4" />
+                    </span>
                     <Input
                       v-model="subtask.title"
                       type="text"
                       placeholder="Write subtask"
                       class="h-10 border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0"
                     />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      class="shrink-0 rounded-full text-slate-400 hover:bg-white hover:text-red-500"
+                      aria-label="Delete subtask"
+                      @click="removeSubtaskField(index)"
+                    >
+                      <X class="size-4" />
+                    </Button>
                   </div>
                 </div>
 

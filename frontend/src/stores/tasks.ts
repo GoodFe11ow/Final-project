@@ -207,5 +207,8 @@ export const useTasksStore = defineStore('tasks', {
 
       task.completed = true
     },
+    deleteTask(taskId: string) {
+      this.tasks = this.tasks.filter((task) => task.id !== taskId)
+    },
   },
 })

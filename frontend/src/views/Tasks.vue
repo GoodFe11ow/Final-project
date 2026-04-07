@@ -72,10 +72,6 @@ const submitLabel = computed(() => {
   return isCreateMode.value ? 'Create Task' : 'Confirm Changes'
 })
 
-const formattedAssignedDate = computed(() => {
-  return formatAssignedDateLabel(taskForm.assignedDate)
-})
-
 const canSubmitForm = computed(() => taskForm.title.trim().length > 0)
 
 function createDraftSubtaskId() {
@@ -100,26 +96,6 @@ function getDefaultAssignedDate() {
   tomorrow.setDate(tomorrow.getDate() + 1)
 
   return tomorrow.toISOString().slice(0, 10)
-}
-
-function formatAssignedDateLabel(dateValue: string) {
-  if (!dateValue) return 'Choose date'
-
-  const targetDate = new Date(`${dateValue}T00:00:00`)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  if (targetDate.getTime() === today.getTime()) return 'Today'
-  if (targetDate.getTime() === tomorrow.getTime()) return 'Tomorrow'
-
-  return new Intl.DateTimeFormat('en', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(targetDate)
 }
 
 function resetTaskForm() {
@@ -527,26 +503,24 @@ function progressMessage(task: TaskItem) {
                 </Button>
               </div>
 
-              <label class="relative flex cursor-pointer items-center gap-4 rounded-[1.25rem] bg-[#f4f6ff] px-4 py-4">
+              <div class="flex items-center gap-4 rounded-[1.25rem] bg-[#f4f6ff] px-4 py-4">
                 <span class="flex size-10 items-center justify-center rounded-full bg-white text-slate-500">
                   <CalendarDays class="size-5" />
                 </span>
 
-                <div class="min-w-0">
-                  <p class="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    Setting a Date
-                  </p>
-                  <p class="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-800">
-                    {{ formattedAssignedDate }}
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-semibold tracking-[-0.02em] text-slate-700">
+                    Scheduled for
                   </p>
                 </div>
 
-                <input
+                <Input
+                  id="task-assigned-date"
                   v-model="taskForm.assignedDate"
                   type="date"
-                  class="absolute inset-0 cursor-pointer opacity-0"
+                  class="h-11 w-[10rem] rounded-xl border-white bg-white px-3 text-sm font-medium text-slate-700 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.28)] focus-visible:ring-1"
                 />
-              </label>
+              </div>
 
               <Button
                 type="submit"

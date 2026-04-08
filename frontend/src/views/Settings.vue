@@ -24,18 +24,16 @@ import {
 } from '@/stores/timer-settings'
 
 type NotificationSettingKey = 'focus-reminders' | 'daily-summary'
+type SettingsThemeMode = 'light' | 'dark'
 
 const router = useRouter()
 const timerSettingsStore = useTimerSettingsStore()
 const { breakDurationSeconds, focusDurationSeconds } = storeToRefs(timerSettingsStore)
-const sectionShellClass =
-  'space-y-3 rounded-[1rem] border border-slate-200/80 bg-[#f5f7ff] p-3 shadow-[0_24px_56px_-44px_rgba(15,23,42,0.14)]'
-const rowCardClass =
-  'rounded-[1rem] border border-slate-200/80 bg-white shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)]'
 
 const activeTimerSetting = ref<TimerSettingKey | null>(null)
 const focusRemindersOpen = ref(false)
 const dailySummaryOpen = ref(false)
+const settingsTheme = ref<SettingsThemeMode>('light')
 
 const focusReminderSettings = reactive({
   enabled: true,
@@ -94,6 +92,70 @@ const isDurationDialogOpen = computed({
   },
 })
 
+const isDarkTheme = computed(() => settingsTheme.value === 'dark')
+
+const pageSurfaceClass = computed(() =>
+  isDarkTheme.value
+    ? 'flex flex-1 flex-col gap-7 -mx-4 -my-4 bg-[#0F172A] px-4 py-6 text-white transition-colors duration-300'
+    : 'flex flex-1 flex-col gap-7 -mx-4 -my-4 bg-[#f8faff] px-4 py-6 text-slate-900 transition-colors duration-300',
+)
+
+const sectionShellClass = computed(() =>
+  isDarkTheme.value
+    ? 'space-y-3 rounded-[1rem] border border-slate-700/80 bg-[#1E293B] p-3 shadow-[0_24px_56px_-44px_rgba(2,6,23,0.72)] transition-colors duration-300'
+    : 'space-y-3 rounded-[1rem] border border-slate-200/80 bg-[#f5f7ff] p-3 shadow-[0_24px_56px_-44px_rgba(15,23,42,0.14)] transition-colors duration-300',
+)
+
+const rowCardClass = computed(() =>
+  isDarkTheme.value
+    ? 'rounded-[1rem] border border-slate-600/80 bg-[#334155] shadow-[0_18px_38px_-34px_rgba(2,6,23,0.76)] transition-colors duration-300'
+    : 'rounded-[1rem] border border-slate-200/80 bg-white shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)] transition-colors duration-300',
+)
+
+const sectionLabelClass = computed(() =>
+  isDarkTheme.value
+    ? 'px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-400'
+    : 'px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500',
+)
+
+const titleTextClass = computed(() =>
+  isDarkTheme.value
+    ? 'text-[1.02rem] font-semibold tracking-[-0.02em] text-white'
+    : 'text-[1.02rem] font-semibold tracking-[-0.02em] text-slate-800',
+)
+
+const descriptionTextClass = computed(() =>
+  isDarkTheme.value ? 'mt-1 text-sm text-slate-300' : 'mt-1 text-sm text-slate-400',
+)
+
+const valueTextClass = computed(() =>
+  isDarkTheme.value
+    ? 'text-[1.02rem] font-semibold text-blue-400'
+    : 'text-[1.02rem] font-semibold text-blue-500',
+)
+
+const blueIconClass = computed(() =>
+  isDarkTheme.value
+    ? 'flex size-11 items-center justify-center rounded-[1rem] bg-[#0F172A] text-blue-500'
+    : 'flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-blue-500',
+)
+
+const neutralIconClass = computed(() =>
+  isDarkTheme.value
+    ? 'flex size-11 items-center justify-center rounded-[1rem] bg-[#0F172A] text-slate-200'
+    : 'flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-slate-500',
+)
+
+const chevronClass = computed(() =>
+  isDarkTheme.value ? 'size-4 text-slate-500' : 'size-4 text-slate-300',
+)
+
+const themeToggleShellClass = computed(() =>
+  isDarkTheme.value
+    ? 'flex items-center rounded-full bg-[#0F172A] p-1'
+    : 'flex items-center rounded-full bg-[#e7ebf8] p-1',
+)
+
 const durationDialogConfig = computed(() => {
   if (activeTimerSetting.value === 'break') {
     return {
@@ -106,7 +168,7 @@ const durationDialogConfig = computed(() => {
 
   return {
     title: 'Focus Duration',
-      description: 'Choose your default deep work session length.',
+    description: 'Choose your default deep work session length.',
     selectedValue: focusDurationSeconds.value,
     options: [25 * 60, 30 * 60, 35 * 60, 45 * 60, 50 * 60, 60 * 60],
   }
@@ -169,25 +231,43 @@ function formatTimeLabel(timeValue: string) {
     hour12: true,
   }).format(date)
 }
+
+function setSettingsTheme(nextTheme: SettingsThemeMode) {
+  settingsTheme.value = nextTheme
+}
+
+function getThemeToggleButtonClass(themeMode: SettingsThemeMode) {
+  const isActive = settingsTheme.value === themeMode
+
+  if (isDarkTheme.value) {
+    return isActive
+      ? 'rounded-full bg-[#334155] px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors'
+      : 'rounded-full px-4 py-1.5 text-sm font-semibold text-slate-300 transition-colors'
+  }
+
+  return isActive
+    ? 'rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-blue-500 shadow-sm transition-colors'
+    : 'rounded-full px-4 py-1.5 text-sm font-semibold text-slate-500 transition-colors'
+}
 </script>
 
 <template>
   <AppShell>
-    <section class="flex flex-1 flex-col gap-7 pb-4 pt-2">
+    <section :class="pageSurfaceClass">
       <section :class="sectionShellClass">
-        <p class="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <p :class="sectionLabelClass">
           Statistics
         </p>
 
         <button type="button" class="w-full text-left" @click="router.push('/stats')">
           <Card :class="rowCardClass">
             <CardContent class="flex items-center gap-4 p-4">
-              <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-blue-500">
+              <span :class="blueIconClass">
                 <BarChart3 class="size-5" />
               </span>
 
               <div class="min-w-0 flex-1">
-                <p class="text-[1.02rem] font-semibold tracking-[-0.02em] text-slate-800">
+                <p :class="titleTextClass">
                   View Statistics
                 </p>
               </div>
@@ -199,7 +279,7 @@ function formatTimeLabel(timeValue: string) {
       </section>
 
       <section :class="sectionShellClass">
-        <p class="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <p :class="sectionLabelClass">
           Timer Settings
         </p>
 
@@ -213,24 +293,24 @@ function formatTimeLabel(timeValue: string) {
           >
             <Card :class="rowCardClass">
               <CardContent class="flex items-center gap-4 p-4">
-                <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-blue-500">
+                <span :class="blueIconClass">
                   <component :is="setting.icon" class="size-5" />
                 </span>
 
                 <div class="min-w-0 flex-1">
-                  <p class="text-[1.02rem] font-semibold tracking-[-0.02em] text-slate-800">
+                  <p :class="titleTextClass">
                     {{ setting.title }}
                   </p>
-                  <p class="mt-1 text-sm text-slate-400">
+                  <p :class="descriptionTextClass">
                     {{ setting.description }}
                   </p>
                 </div>
 
                 <div class="flex items-center gap-2">
-                  <span class="text-[1.02rem] font-semibold text-blue-500">
+                  <span :class="valueTextClass">
                     {{ setting.value }}
                   </span>
-                  <ChevronRight class="size-4 text-slate-300" />
+                  <ChevronRight :class="chevronClass" />
                 </div>
               </CardContent>
             </Card>
@@ -239,7 +319,7 @@ function formatTimeLabel(timeValue: string) {
       </section>
 
       <section :class="sectionShellClass">
-        <p class="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <p :class="sectionLabelClass">
           Notifications
         </p>
 
@@ -253,20 +333,20 @@ function formatTimeLabel(timeValue: string) {
           >
             <Card :class="rowCardClass">
               <CardContent class="flex items-center gap-4 p-4">
-                <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-slate-500">
+                <span :class="neutralIconClass">
                   <component :is="setting.icon" class="size-5" />
                 </span>
 
                 <div class="min-w-0 flex-1">
-                  <p class="text-[1.02rem] font-semibold tracking-[-0.02em] text-slate-800">
+                  <p :class="titleTextClass">
                     {{ setting.title }}
                   </p>
-                  <p class="mt-1 text-sm text-slate-400">
+                  <p :class="descriptionTextClass">
                     {{ setting.description }}
                   </p>
                 </div>
 
-                <ChevronRight class="size-4 text-slate-300" />
+                <ChevronRight :class="chevronClass" />
               </CardContent>
             </Card>
           </button>
@@ -274,32 +354,34 @@ function formatTimeLabel(timeValue: string) {
       </section>
 
       <section :class="sectionShellClass">
-        <p class="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <p :class="sectionLabelClass">
           Appearance
         </p>
 
         <Card :class="rowCardClass">
           <CardContent class="flex items-center gap-4 p-4">
-            <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-slate-500">
+            <span :class="neutralIconClass">
               <MoonStar class="size-5" />
             </span>
 
             <div class="min-w-0 flex-1">
-              <p class="text-[1.02rem] font-semibold tracking-[-0.02em] text-slate-800">
+              <p :class="titleTextClass">
                 Theme
               </p>
             </div>
 
-            <div class="flex items-center rounded-full bg-[#e7ebf8] p-1">
+            <div :class="themeToggleShellClass">
               <button
                 type="button"
-                class="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-blue-500 shadow-sm"
+                :class="getThemeToggleButtonClass('light')"
+                @click="setSettingsTheme('light')"
               >
                 Light
               </button>
               <button
                 type="button"
-                class="rounded-full px-4 py-1.5 text-sm font-semibold text-slate-500"
+                :class="getThemeToggleButtonClass('dark')"
+                @click="setSettingsTheme('dark')"
               >
                 Dark
               </button>
@@ -312,7 +394,12 @@ function formatTimeLabel(timeValue: string) {
         <Button
           type="button"
           variant="outline"
-          class="mx-auto h-12 rounded-xl border-red-300 px-6 text-base font-semibold text-red-500 hover:bg-red-50 hover:text-red-600"
+          class="mx-auto h-12 rounded-xl px-6 text-base font-semibold transition-colors"
+          :class="
+            isDarkTheme
+              ? 'border-red-400/60 bg-transparent text-red-400 hover:bg-red-500/10 hover:text-red-300'
+              : 'border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600'
+          "
         >
           <LogOut class="size-4" />
           Log out
@@ -321,6 +408,7 @@ function formatTimeLabel(timeValue: string) {
 
       <TimerDurationDialog
         v-model:open="isDurationDialogOpen"
+        :theme="settingsTheme"
         :title="durationDialogConfig.title"
         :description="durationDialogConfig.description"
         :selected-value="durationDialogConfig.selectedValue"
@@ -330,6 +418,7 @@ function formatTimeLabel(timeValue: string) {
 
       <NotificationSettingsDialog
         v-model:open="focusRemindersOpen"
+        :theme="settingsTheme"
         title="Focus Reminders"
         enabled-label="Enable Reminders"
         enabled-description="Stay on track with daily notifications"
@@ -340,6 +429,7 @@ function formatTimeLabel(timeValue: string) {
 
       <NotificationSettingsDialog
         v-model:open="dailySummaryOpen"
+        :theme="settingsTheme"
         title="Daily Summary"
         enabled-label="Enable Summary"
         enabled-description="Get a notification at the end of your day."

@@ -14,6 +14,8 @@ type DurationOption = {
   value: number
 }
 
+type SettingsThemeMode = 'light' | 'dark'
+
 const props = withDefaults(
   defineProps<{
     open: boolean
@@ -21,9 +23,11 @@ const props = withDefaults(
     description?: string
     selectedValue: number
     options: Array<number | DurationOption>
+    theme?: SettingsThemeMode
   }>(),
   {
     description: undefined,
+    theme: 'light',
   },
 )
 
@@ -59,6 +63,7 @@ const customTotalSeconds = computed(() => {
 })
 
 const canApplyCustom = computed(() => customTotalSeconds.value > 0)
+const isDarkTheme = computed(() => props.theme === 'dark')
 
 watch(
   () => [props.open, props.selectedValue, normalizedOptions.value.length] as const,
@@ -108,20 +113,34 @@ function sanitizeNumber(value: string) {
 
 <template>
   <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent class="max-w-[23rem] overflow-hidden rounded-[1.9rem] border-slate-200/80 p-0">
-      <div class="bg-white">
-        <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+    <DialogContent
+      class="max-w-[23rem] overflow-hidden rounded-[1.9rem] p-0 transition-colors duration-300"
+      :class="isDarkTheme ? 'border-slate-700/80' : 'border-slate-200/80'"
+    >
+      <div :class="isDarkTheme ? 'bg-[#0F172A]' : 'bg-white'">
+        <div
+          class="flex items-center justify-between border-b px-5 py-4 transition-colors duration-300"
+          :class="isDarkTheme ? 'border-slate-700/80' : 'border-slate-100'"
+        >
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            class="rounded-full text-slate-500 hover:bg-slate-100"
+            class="rounded-full transition-colors"
+            :class="
+              isDarkTheme
+                ? 'text-slate-300 hover:bg-[#1E293B]'
+                : 'text-slate-500 hover:bg-slate-100'
+            "
             @click="closeDialog"
           >
             <X class="size-5" />
           </Button>
 
-          <DialogTitle class="text-xl font-semibold tracking-[-0.03em]">
+          <DialogTitle
+            class="text-xl font-semibold tracking-[-0.03em]"
+            :class="isDarkTheme ? 'text-white' : 'text-slate-900'"
+          >
             {{ title }}
           </DialogTitle>
 
@@ -130,11 +149,20 @@ function sanitizeNumber(value: string) {
 
         <div class="space-y-5 px-5 py-5">
           <div class="text-center">
-            <p v-if="description" class="mx-auto max-w-[16rem] text-sm leading-6 text-slate-400">
+            <p
+              v-if="description"
+              class="mx-auto max-w-[16rem] text-sm leading-6"
+              :class="isDarkTheme ? 'text-slate-300' : 'text-slate-400'"
+            >
               {{ description }}
             </p>
             <div
-              class="mx-auto mt-4 inline-flex items-center rounded-full bg-[#eef2ff] px-4 py-2 text-sm font-semibold text-blue-500"
+              class="mx-auto mt-4 inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-300"
+              :class="
+                isDarkTheme
+                  ? 'bg-[#1E293B] text-blue-400'
+                  : 'bg-[#eef2ff] text-blue-500'
+              "
             >
               Current: {{ formatDurationLabel(selectedValue) }}
             </div>
@@ -149,7 +177,9 @@ function sanitizeNumber(value: string) {
               :class="
                 option.value === selectedValue && !customMode
                   ? 'border-blue-200 bg-[#eef4ff] text-blue-500 shadow-[0_18px_34px_-26px_rgba(59,130,246,0.45)]'
-                  : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
+                  : isDarkTheme
+                    ? 'border-slate-600/80 bg-[#334155] text-white hover:bg-[#3f4d61]'
+                    : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
               "
               @click="selectDuration(option.value)"
             >
@@ -166,7 +196,9 @@ function sanitizeNumber(value: string) {
               :class="
                 customMode
                   ? 'border-blue-200 bg-[#eef4ff] text-blue-500 shadow-[0_18px_34px_-26px_rgba(59,130,246,0.45)]'
-                  : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
+                  : isDarkTheme
+                    ? 'border-slate-600/80 bg-[#334155] text-white hover:bg-[#3f4d61]'
+                    : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
               "
               @click="openCustomMode"
             >
@@ -180,11 +212,19 @@ function sanitizeNumber(value: string) {
 
           <div
             v-if="customMode"
-            class="space-y-4 rounded-[1.4rem] border border-slate-200/80 bg-[#f8faff] p-4"
+            class="space-y-4 rounded-[1.4rem] border p-4 transition-colors duration-300"
+            :class="
+              isDarkTheme
+                ? 'border-slate-600/80 bg-[#1E293B]'
+                : 'border-slate-200/80 bg-[#f8faff]'
+            "
           >
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-2">
-                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                <label
+                  class="text-xs font-semibold uppercase tracking-[0.12em]"
+                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-500'"
+                >
                   Minutes
                 </label>
                 <Input
@@ -192,12 +232,20 @@ function sanitizeNumber(value: string) {
                   type="number"
                   inputmode="numeric"
                   min="0"
-                  class="h-11 rounded-xl border-slate-200/80 bg-white text-center text-base font-semibold shadow-none"
+                  class="h-11 rounded-xl text-center text-base font-semibold shadow-none transition-colors duration-300"
+                  :class="
+                    isDarkTheme
+                      ? 'border-slate-600/80 bg-[#0F172A] text-white'
+                      : 'border-slate-200/80 bg-white text-slate-900'
+                  "
                 />
               </div>
 
               <div class="space-y-2">
-                <label class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                <label
+                  class="text-xs font-semibold uppercase tracking-[0.12em]"
+                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-500'"
+                >
                   Seconds
                 </label>
                 <Input
@@ -206,7 +254,12 @@ function sanitizeNumber(value: string) {
                   inputmode="numeric"
                   min="0"
                   max="59"
-                  class="h-11 rounded-xl border-slate-200/80 bg-white text-center text-base font-semibold shadow-none"
+                  class="h-11 rounded-xl text-center text-base font-semibold shadow-none transition-colors duration-300"
+                  :class="
+                    isDarkTheme
+                      ? 'border-slate-600/80 bg-[#0F172A] text-white'
+                      : 'border-slate-200/80 bg-white text-slate-900'
+                  "
                 />
               </div>
             </div>

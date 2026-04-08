@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import AppShell from '@/components/layout/AppShell.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { useTimerSettingsStore } from '@/stores/timer-settings'
 import {
   CheckCircle2,
   ChevronRight,
@@ -14,7 +16,7 @@ import {
   TimerReset,
 } from 'lucide-vue-next'
 
-type FocusModeId = 'focus' | 'short-break'
+type FocusModeId = 'focus' | 'break'
 type TimerState = 'idle' | 'running' | 'paused' | 'completed'
 type CompletionType = 'completed-normally' | 'stopped-early'
 
@@ -42,26 +44,29 @@ const demoTasks = [
   'Client Meeting Prep',
 ]
 
-const modes: FocusMode[] = [
+const timerSettingsStore = useTimerSettingsStore()
+const { breakDurationSeconds, focusDurationSeconds } = storeToRefs(timerSettingsStore)
+
+const modes = computed<FocusMode[]>(() => [
   {
     id: 'focus',
     label: 'Focus',
     icon: TimerReset,
-    durationMs: 0.1 * 60 * 1000,
+    durationMs: focusDurationSeconds.value * 1000,
     idleSubtitle: 'Stay in Shape',
     sessionBadge: 'Deep Work Mode',
     quote: '"Concentrate all your thoughts upon the work in hand."',
   },
   {
-    id: 'short-break',
+    id: 'break',
     label: 'Short Break',
     icon: Coffee,
-    durationMs: 0.2 * 60 * 1000,
+    durationMs: breakDurationSeconds.value * 1000,
     idleSubtitle: 'Reset Your Energy',
     sessionBadge: 'Recovery Mode',
     quote: '"A short reset helps the next focus block feel lighter."',
   },
-]
+])
 
 const circleRadius = 138
 const circleCircumference = 2 * Math.PI * circleRadius
@@ -150,7 +155,7 @@ const completionStatusLabel = computed(() => {
 })
 
 function getModeConfig(id: FocusModeId) {
-  return modes.find((mode) => mode.id === id) ?? modes[0]
+  return modes.value.find((mode) => mode.id === id) ?? modes.value[0]
 }
 
 function formatDuration(durationMs: number) {
@@ -240,8 +245,6 @@ function handleModeSelect(modeId: FocusModeId) {
   if (timerState.value !== 'idle') return
 
   selectedMode.value = modeId
-  plannedDurationMs.value = getModeConfig(modeId).durationMs
-  remainingMs.value = plannedDurationMs.value
 }
 
 function handleChangeTask() {
@@ -287,6 +290,17 @@ function stopSession() {
 onBeforeUnmount(() => {
   clearTickInterval()
 })
+
+watch(
+  () => currentMode.value.durationMs,
+  (nextDurationMs) => {
+    if (timerState.value !== 'idle') return
+
+    plannedDurationMs.value = nextDurationMs
+    remainingMs.value = nextDurationMs
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import {
   BarChart3,
@@ -11,29 +13,41 @@ import {
   MoonStar,
 } from 'lucide-vue-next'
 import AppShell from '@/components/layout/AppShell.vue'
+import TimerDurationDialog from '@/components/settings/TimerDurationDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  formatDurationLabel,
+  useTimerSettingsStore,
+  type TimerSettingKey,
+} from '@/stores/timer-settings'
 
 const router = useRouter()
+const timerSettingsStore = useTimerSettingsStore()
+const { breakDurationSeconds, focusDurationSeconds } = storeToRefs(timerSettingsStore)
 const sectionShellClass =
-  'space-y-3 rounded-[1.9rem] border border-slate-200/80 bg-[#f5f7ff] p-3 shadow-[0_24px_56px_-44px_rgba(15,23,42,0.14)]'
+  'space-y-3 rounded-[1rem] border border-slate-200/80 bg-[#f5f7ff] p-3 shadow-[0_24px_56px_-44px_rgba(15,23,42,0.14)]'
 const rowCardClass =
-  'rounded-[1.6rem] border border-slate-200/80 bg-white shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)]'
+  'rounded-[1rem] border border-slate-200/80 bg-white shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)]'
 
-const timerSettings = [
+const activeTimerSetting = ref<TimerSettingKey | null>(null)
+
+const timerSettings = computed(() => [
   {
+    key: 'focus' as const,
     icon: Clock3,
     title: 'Focus',
     description: 'Deep work period',
-    value: '35 min',
+    value: formatDurationLabel(focusDurationSeconds.value),
   },
   {
+    key: 'break' as const,
     icon: Coffee,
     title: 'Break',
     description: 'Rest and recharge',
-    value: '5 min',
+    value: formatDurationLabel(breakDurationSeconds.value),
   },
-]
+])
 
 const notificationSettings = [
   {
@@ -45,6 +59,43 @@ const notificationSettings = [
     title: 'Daily summary',
   },
 ]
+
+const isDurationDialogOpen = computed({
+  get: () => activeTimerSetting.value !== null,
+  set: (nextOpen) => {
+    if (!nextOpen) {
+      activeTimerSetting.value = null
+    }
+  },
+})
+
+const durationDialogConfig = computed(() => {
+  if (activeTimerSetting.value === 'break') {
+    return {
+      title: 'Break Duration',
+      description: 'Choose how long each recovery break should last.',
+      selectedValue: breakDurationSeconds.value,
+      options: [5 * 60, 10 * 60, 15 * 60, 20 * 60],
+    }
+  }
+
+  return {
+    title: 'Focus Duration',
+      description: 'Choose your default deep work session length.',
+    selectedValue: focusDurationSeconds.value,
+    options: [25 * 60, 30 * 60, 35 * 60, 45 * 60, 50 * 60, 60 * 60],
+  }
+})
+
+function openTimerDuration(settingKey: TimerSettingKey) {
+  activeTimerSetting.value = settingKey
+}
+
+function updateTimerDuration(nextValue: number) {
+  if (!activeTimerSetting.value) return
+
+  timerSettingsStore.setDurationSeconds(activeTimerSetting.value, nextValue)
+}
 </script>
 
 <template>
@@ -82,9 +133,10 @@ const notificationSettings = [
         <div class="space-y-3">
           <button
             v-for="setting in timerSettings"
-            :key="setting.title"
+            :key="setting.key"
             type="button"
             class="w-full text-left"
+            @click="openTimerDuration(setting.key)"
           >
             <Card :class="rowCardClass">
               <CardContent class="flex items-center gap-4 p-4">
@@ -189,6 +241,15 @@ const notificationSettings = [
           Log out
         </Button>
       </div>
+
+      <TimerDurationDialog
+        v-model:open="isDurationDialogOpen"
+        :title="durationDialogConfig.title"
+        :description="durationDialogConfig.description"
+        :selected-value="durationDialogConfig.selectedValue"
+        :options="durationDialogConfig.options"
+        @select="updateTimerDuration"
+      />
     </section>
   </AppShell>
 </template>

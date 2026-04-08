@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import {
   BarChart3,
   BellRing,
@@ -12,6 +13,12 @@ import {
 import AppShell from '@/components/layout/AppShell.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+
+const router = useRouter()
+const sectionShellClass =
+  'space-y-3 rounded-[1.9rem] border border-slate-200/80 bg-[#f5f7ff] p-3 shadow-[0_24px_56px_-44px_rgba(15,23,42,0.14)]'
+const rowCardClass =
+  'rounded-[1.6rem] border border-slate-200/80 bg-white shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)]'
 
 const timerSettings = [
   {
@@ -43,25 +50,31 @@ const notificationSettings = [
 <template>
   <AppShell>
     <section class="flex flex-1 flex-col gap-7 pb-4 pt-2">
-      <button type="button" class="text-left">
-        <Card class="rounded-[1.75rem] border-white/80 bg-white shadow-[0_24px_56px_-36px_rgba(15,23,42,0.18)]">
-          <CardContent class="flex items-center gap-4 p-4">
-            <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-blue-500">
-              <BarChart3 class="size-5" />
-            </span>
+      <section :class="sectionShellClass">
+        <p class="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+          Statistics
+        </p>
 
-            <div class="min-w-0 flex-1">
-              <p class="text-[1.02rem] font-semibold tracking-[-0.02em] text-slate-800">
-                View Statistics
-              </p>
-            </div>
+        <button type="button" class="w-full text-left" @click="router.push('/stats')">
+          <Card :class="rowCardClass">
+            <CardContent class="flex items-center gap-4 p-4">
+              <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-blue-500">
+                <BarChart3 class="size-5" />
+              </span>
 
-            <ChevronRight class="size-5 text-blue-500" />
-          </CardContent>
-        </Card>
-      </button>
+              <div class="min-w-0 flex-1">
+                <p class="text-[1.02rem] font-semibold tracking-[-0.02em] text-slate-800">
+                  View Statistics
+                </p>
+              </div>
 
-      <section class="space-y-3">
+              <ChevronRight class="size-5 text-blue-500" />
+            </CardContent>
+          </Card>
+        </button>
+      </section>
+
+      <section :class="sectionShellClass">
         <p class="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
           Timer Settings
         </p>
@@ -73,7 +86,7 @@ const notificationSettings = [
             type="button"
             class="w-full text-left"
           >
-            <Card class="rounded-[1.75rem] border-white/80 bg-white shadow-[0_24px_56px_-36px_rgba(15,23,42,0.18)]">
+            <Card :class="rowCardClass">
               <CardContent class="flex items-center gap-4 p-4">
                 <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-blue-500">
                   <component :is="setting.icon" class="size-5" />
@@ -100,7 +113,7 @@ const notificationSettings = [
         </div>
       </section>
 
-      <section class="space-y-3">
+      <section :class="sectionShellClass">
         <p class="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
           Notifications
         </p>
@@ -112,7 +125,7 @@ const notificationSettings = [
             type="button"
             class="w-full text-left"
           >
-            <Card class="rounded-[1.75rem] border-white/80 bg-white shadow-[0_24px_56px_-36px_rgba(15,23,42,0.18)]">
+            <Card :class="rowCardClass">
               <CardContent class="flex items-center gap-4 p-4">
                 <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-slate-500">
                   <component :is="setting.icon" class="size-5" />
@@ -131,12 +144,12 @@ const notificationSettings = [
         </div>
       </section>
 
-      <section class="space-y-3">
+      <section :class="sectionShellClass">
         <p class="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
           Appearance
         </p>
 
-        <Card class="rounded-[1.75rem] border-white/80 bg-white shadow-[0_24px_56px_-36px_rgba(15,23,42,0.18)]">
+        <Card :class="rowCardClass">
           <CardContent class="flex items-center gap-4 p-4">
             <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#eef2ff] text-slate-500">
               <MoonStar class="size-5" />

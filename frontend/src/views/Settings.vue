@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import {
@@ -13,6 +13,7 @@ import {
   MoonStar,
 } from 'lucide-vue-next'
 import AppShell from '@/components/layout/AppShell.vue'
+import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog.vue'
 import TimerDurationDialog from '@/components/settings/TimerDurationDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,6 +22,8 @@ import {
   useTimerSettingsStore,
   type TimerSettingKey,
 } from '@/stores/timer-settings'
+
+type NotificationSettingKey = 'focus-reminders' | 'daily-summary'
 
 const router = useRouter()
 const timerSettingsStore = useTimerSettingsStore()
@@ -31,6 +34,20 @@ const rowCardClass =
   'rounded-[1rem] border border-slate-200/80 bg-white shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)]'
 
 const activeTimerSetting = ref<TimerSettingKey | null>(null)
+const focusRemindersOpen = ref(false)
+const dailySummaryOpen = ref(false)
+
+const focusReminderSettings = reactive({
+  enabled: true,
+  time: '09:00',
+  everyDay: false,
+  weekdays: true,
+})
+
+const dailySummarySettings = reactive({
+  enabled: true,
+  time: '20:00',
+})
 
 const timerSettings = computed(() => [
   {
@@ -49,16 +66,24 @@ const timerSettings = computed(() => [
   },
 ])
 
-const notificationSettings = [
+const notificationSettings = computed(() => [
   {
+    key: 'focus-reminders' as const,
     icon: BellRing,
     title: 'Focus reminders',
+    description: focusReminderSettings.enabled
+      ? `${formatTimeLabel(focusReminderSettings.time)} · ${focusReminderSettings.everyDay ? 'Every day' : focusReminderSettings.weekdays ? 'Weekdays' : 'Custom'}`
+      : 'Off',
   },
   {
+    key: 'daily-summary' as const,
     icon: FileText,
     title: 'Daily summary',
+    description: dailySummarySettings.enabled
+      ? formatTimeLabel(dailySummarySettings.time)
+      : 'Off',
   },
-]
+])
 
 const isDurationDialogOpen = computed({
   get: () => activeTimerSetting.value !== null,
@@ -95,6 +120,54 @@ function updateTimerDuration(nextValue: number) {
   if (!activeTimerSetting.value) return
 
   timerSettingsStore.setDurationSeconds(activeTimerSetting.value, nextValue)
+}
+
+function openNotificationSetting(settingKey: NotificationSettingKey) {
+  if (settingKey === 'focus-reminders') {
+    focusRemindersOpen.value = true
+    return
+  }
+
+  dailySummaryOpen.value = true
+}
+
+function saveFocusReminderSettings(nextValue: {
+  enabled: boolean
+  time: string
+  everyDay?: boolean
+  weekdays?: boolean
+}) {
+  focusReminderSettings.enabled = nextValue.enabled
+  focusReminderSettings.time = nextValue.time
+  focusReminderSettings.everyDay = nextValue.everyDay ?? false
+  focusReminderSettings.weekdays = nextValue.weekdays ?? false
+}
+
+function saveDailySummarySettings(nextValue: {
+  enabled: boolean
+  time: string
+}) {
+  dailySummarySettings.enabled = nextValue.enabled
+  dailySummarySettings.time = nextValue.time
+}
+
+function formatTimeLabel(timeValue: string) {
+  if (!timeValue) return '--:--'
+
+  const [hoursRaw, minutesRaw] = timeValue.split(':')
+  const hours = Number(hoursRaw)
+  const minutes = Number(minutesRaw)
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return timeValue
+
+  const date = new Date()
+  date.setHours(hours, minutes, 0, 0)
+
+  return new Intl.DateTimeFormat('en', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)
 }
 </script>
 
@@ -173,9 +246,10 @@ function updateTimerDuration(nextValue: number) {
         <div class="space-y-3">
           <button
             v-for="setting in notificationSettings"
-            :key="setting.title"
+            :key="setting.key"
             type="button"
             class="w-full text-left"
+            @click="openNotificationSetting(setting.key)"
           >
             <Card :class="rowCardClass">
               <CardContent class="flex items-center gap-4 p-4">
@@ -186,6 +260,9 @@ function updateTimerDuration(nextValue: number) {
                 <div class="min-w-0 flex-1">
                   <p class="text-[1.02rem] font-semibold tracking-[-0.02em] text-slate-800">
                     {{ setting.title }}
+                  </p>
+                  <p class="mt-1 text-sm text-slate-400">
+                    {{ setting.description }}
                   </p>
                 </div>
 
@@ -249,6 +326,26 @@ function updateTimerDuration(nextValue: number) {
         :selected-value="durationDialogConfig.selectedValue"
         :options="durationDialogConfig.options"
         @select="updateTimerDuration"
+      />
+
+      <NotificationSettingsDialog
+        v-model:open="focusRemindersOpen"
+        title="Focus Reminders"
+        enabled-label="Enable Reminders"
+        enabled-description="Stay on track with daily notifications"
+        :value="focusReminderSettings"
+        show-frequency
+        @save="saveFocusReminderSettings"
+      />
+
+      <NotificationSettingsDialog
+        v-model:open="dailySummaryOpen"
+        title="Daily Summary"
+        enabled-label="Enable Summary"
+        enabled-description="Get a notification at the end of your day."
+        :value="dailySummarySettings"
+        time-hint="Scheduled delivery"
+        @save="saveDailySummarySettings"
       />
     </section>
   </AppShell>

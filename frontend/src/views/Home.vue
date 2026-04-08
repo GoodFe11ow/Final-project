@@ -20,7 +20,7 @@ type QuickAction = {
 const router = useRouter()
 
 const todayLabel = 'Thursday, 24 Oct'
-const userName = 'Alex'
+const userName = 'User'
 
 const currentTasks: HomeTask[] = [
   {

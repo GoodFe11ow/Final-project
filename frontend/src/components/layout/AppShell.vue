@@ -3,12 +3,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
 import { CalendarDays, House, ListChecks, TimerReset } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 const props = withDefaults(
   defineProps<{
@@ -61,28 +55,20 @@ const isHomeRoute = computed(() => route.path === '/')
           </Button>
           <span v-else class="inline-block h-8 w-12" aria-hidden="true" />
           <h1 class="text-lg font-semibold">{{ headerTitle }}</h1>
-          <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                class="shrink-0"
-                aria-label="Open menu"
-              >
-                <span class="flex flex-col items-center justify-center gap-0.5" aria-hidden="true">
-                  <span class="h-1 w-1 rounded-full bg-current" />
-                  <span class="h-1 w-1 rounded-full bg-current" />
-                  <span class="h-1 w-1 rounded-full bg-current" />
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="w-40">
-              <DropdownMenuItem @select="router.push('/settings')">
-                Settings
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            class="shrink-0"
+            aria-label="Open settings"
+            @click="router.push('/settings')"
+          >
+            <span class="flex flex-col items-center justify-center gap-0.5" aria-hidden="true">
+              <span class="h-1 w-1 rounded-full bg-current" />
+              <span class="h-1 w-1 rounded-full bg-current" />
+              <span class="h-1 w-1 rounded-full bg-current" />
+            </span>
+          </Button>
         </div>
       </header>
     </div>

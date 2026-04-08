@@ -51,7 +51,7 @@ const isHomeRoute = computed(() => route.path === '/')
             class="px-2 text-xs"
             @click="router.push('/welcome')"
           >
-            Выйти
+            Quit
           </Button>
           <span v-else class="inline-block h-8 w-12" aria-hidden="true" />
           <h1 class="text-lg font-semibold">{{ headerTitle }}</h1>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
-import { CalendarDays, House, ListChecks, TimerReset } from 'lucide-vue-next'
+import { CalendarDays, House, ListChecks, TimerReset, LogOutIcon } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
 const props = withDefaults(
@@ -51,7 +51,7 @@ const isHomeRoute = computed(() => route.path === '/')
             class="px-2 text-xs"
             @click="router.push('/welcome')"
           >
-            Quit
+          <LogOutIcon></LogOutIcon>
           </Button>
           <span v-else class="inline-block h-8 w-12" aria-hidden="true" />
           <h1 class="text-lg font-semibold">{{ headerTitle }}</h1>

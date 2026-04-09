@@ -400,7 +400,7 @@ function getThemeToggleButtonClass(themeMode: SettingsThemeMode) {
               ? 'border-red-400/60 bg-transparent text-red-400 hover:bg-red-500/10 hover:text-red-300'
               : 'border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600'
           "
-          @click="router.push('/welcome')"
+          @click="router.push('/')"
         >
           <LogOut class="size-4" />
           Log out

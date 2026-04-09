@@ -17,7 +17,7 @@ const route = useRoute()
 const router = useRouter()
 
 const navItems = computed(() => [
-  { name: 'Home', to: '/', icon: House },
+  { name: 'Home', to: '/home', icon: House },
   { name: 'Focus', to: '/focus', icon: TimerReset },
   { name: 'Tasks', to: '/tasks', icon: ListChecks },
   { name: 'Calendar', to: '/calendar', icon: CalendarDays },
@@ -28,7 +28,7 @@ function isActive(path: string) {
 }
 
 const headerTitle = computed(() => String(route.meta.title ?? 'Productivity'))
-const isHomeRoute = computed(() => route.path === '/')
+const isHomeRoute = computed(() => route.path === '/home')
 const mainInsetClass = computed(() =>
   props.chromeHidden
     ? 'px-4 pb-4 pt-4'
@@ -54,7 +54,7 @@ const mainInsetClass = computed(() =>
             variant="ghost"
             size="sm"
             class="px-2 text-xs"
-            @click="router.push('/welcome')"
+            @click="router.push('/')"
           >
             <LogOutIcon />
           </Button>

@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useRouter } from 'vue-router'
-import { Eye } from 'lucide-vue-next'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 const router = useRouter()
+const isPasswordVisible = ref(false)
 
 function handleSubmit() {
   router.push('/home')
@@ -29,14 +31,20 @@ function handleSubmit() {
           <div class="relative">
             <Input
               id="login-password"
-              type="password"
+              :type="isPasswordVisible ? 'text' : 'password'"
               placeholder="Enter your password"
               autocomplete="current-password"
               class="h-12 rounded-xl bg-white/80 pr-11"
             />
-            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted-foreground">
-              <Eye class="h-5 w-5" />
-            </span>
+            <button
+              type="button"
+              class="absolute inset-y-0 right-3 flex items-center text-muted-foreground transition-colors hover:text-foreground"
+              :aria-label="isPasswordVisible ? 'Hide password' : 'Show password'"
+              @click="isPasswordVisible = !isPasswordVisible"
+            >
+              <EyeOff v-if="isPasswordVisible" class="h-5 w-5" />
+              <Eye v-else class="h-5 w-5" />
+            </button>
           </div>
         </div>
 

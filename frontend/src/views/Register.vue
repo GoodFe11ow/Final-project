@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useRouter } from 'vue-router'
-import { Eye } from 'lucide-vue-next'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 const router = useRouter()
+const isPasswordVisible = ref(false)
+const isConfirmPasswordVisible = ref(false)
 
 function handleSubmit() {
   router.push('/home')
@@ -34,14 +37,20 @@ function handleSubmit() {
           <div class="relative">
             <Input
               id="register-password"
-              type="password"
+              :type="isPasswordVisible ? 'text' : 'password'"
               placeholder="Create a password"
               autocomplete="new-password"
               class="h-12 rounded-xl bg-white/80 pr-11"
             />
-            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted-foreground">
-              <Eye class="h-5 w-5" />
-            </span>
+            <button
+              type="button"
+              class="absolute inset-y-0 right-3 flex items-center text-muted-foreground transition-colors hover:text-foreground"
+              :aria-label="isPasswordVisible ? 'Hide password' : 'Show password'"
+              @click="isPasswordVisible = !isPasswordVisible"
+            >
+              <EyeOff v-if="isPasswordVisible" class="h-5 w-5" />
+              <Eye v-else class="h-5 w-5" />
+            </button>
           </div>
         </div>
         <div class="space-y-2">
@@ -49,24 +58,30 @@ function handleSubmit() {
           <div class="relative">
             <Input
               id="register-confirm-password"
-              type="password"
+              :type="isConfirmPasswordVisible ? 'text' : 'password'"
               placeholder="Confirm your password"
               autocomplete="new-password"
               class="h-12 rounded-xl bg-white/80 pr-11"
             />
-            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted-foreground">
-              <Eye class="h-5 w-5" />
-            </span>
+            <button
+              type="button"
+              class="absolute inset-y-0 right-3 flex items-center text-muted-foreground transition-colors hover:text-foreground"
+              :aria-label="isConfirmPasswordVisible ? 'Hide confirm password' : 'Show confirm password'"
+              @click="isConfirmPasswordVisible = !isConfirmPasswordVisible"
+            >
+              <EyeOff v-if="isConfirmPasswordVisible" class="h-5 w-5" />
+              <Eye v-else class="h-5 w-5" />
+            </button>
           </div>
         </div>
 
-        <Button type="submit" class="mt-2 h-12 w-full bg-blue-500 rounded-xl text-base shadow-md">
+        <Button type="submit" class="mt-2 h-12 w-full bg-blue-500 hover:bg-blue-600 rounded-xl text-base shadow-md">
           Create account
         </Button>
       </form>
 
       <p class="mt-8 text-center text-sm font-semibold text-primary">
-        <RouterLink to="/login" class="text-blue-500">
+        <RouterLink to="/login" class="text-blue-500 ">
           Already have an account? Log in
         </RouterLink>
       </p>

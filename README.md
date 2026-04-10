@@ -1,4 +1,4 @@
-# Productivity & Focus App
+#  The Productivity App
 
 Productivity & Focus App is a mobile-first PWA designed to help working students prevent burnout, stay organized, and build healthier study and work routines.
 

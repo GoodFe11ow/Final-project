@@ -99,7 +99,7 @@ function formatCountTick(tick: number | Date) {
 
 <template>
   <AppShell>
-    <section class="flex flex-1 flex-col gap-6 pb-2 pt-3">
+    <section class="flex flex-1 flex-col gap-6">
       <header class="pt-1 text-center">
         <h2 class="text-[2.15rem] font-semibold uppercase tracking-[0.05em] text-slate-900">
           Statistics
@@ -169,7 +169,7 @@ function formatCountTick(tick: number | Date) {
 
         <Card class="mt-3 rounded-[1rem] border-slate-200/80 bg-[#f4f7ff] shadow-[0_28px_60px_-46px_rgba(15,23,42,0.2)]">
           <CardContent class="p-4">
-            <ChartContainer :config="chartConfig" class="h-auto">
+            <ChartContainer :config="chartConfig" class="h-[18rem]">
               <VisXYContainer
                 :data="weeklyChartData"
                 :y-domain="[0, 5]"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
-import { CalendarDays, House, ListChecks, TimerReset, LogOutIcon } from 'lucide-vue-next'
+import { CalendarDays, House, ListChecks, TimerReset } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
 const props = withDefaults(
@@ -17,7 +17,7 @@ const route = useRoute()
 const router = useRouter()
 
 const navItems = computed(() => [
-  { name: 'Home', to: '/', icon: House },
+  { name: 'Home', to: '/home', icon: House },
   { name: 'Focus', to: '/focus', icon: TimerReset },
   { name: 'Tasks', to: '/tasks', icon: ListChecks },
   { name: 'Calendar', to: '/calendar', icon: CalendarDays },
@@ -27,44 +27,30 @@ function isActive(path: string) {
   return route.path === path
 }
 
-const headerTitle = computed(() => String(route.meta.title ?? 'Productivity'))
-const isHomeRoute = computed(() => route.path === '/')
 const mainInsetClass = computed(() =>
   props.chromeHidden
     ? 'px-4 pb-4 pt-4'
-    : 'px-4 pb-[5.5rem] pt-[4.75rem]',
+    : 'px-4 pb-[5.5rem] pt-[3.25rem]',
 )
 </script>
 
 <template>
   <div class="flex min-h-svh flex-col bg-background text-foreground">
     <div
-      class="fixed inset-x-0 top-0 z-20 transition-[opacity,transform] duration-300 ease-out"
+      class="pointer-events-none fixed inset-x-0 top-0 z-20 transition-[opacity,transform] duration-300 ease-out"
       :class="
         props.chromeHidden
           ? 'pointer-events-none -translate-y-full opacity-0'
           : 'translate-y-0 opacity-100'
       "
     >
-      <header class="bg-background/80 backdrop-blur-sm">
-        <div class="mx-auto flex w-full max-w-md items-center justify-between px-4 py-3">
+      <div class="relative mx-auto w-full max-w-md">
+        <div class="pointer-events-auto absolute right-4 top-4">
           <Button
-            v-if="isHomeRoute"
             type="button"
             variant="ghost"
-            size="sm"
-            class="px-2 text-xs"
-            @click="router.push('/welcome')"
-          >
-            <LogOutIcon />
-          </Button>
-          <span v-else class="inline-block h-8 w-12" aria-hidden="true" />
-          <h1 class="text-lg font-semibold">{{ headerTitle }}</h1>
-          <Button
-            type="button"
-            variant="outline"
             size="icon-sm"
-            class="shrink-0"
+            class="shrink-0 rounded-full bg-background/85 text-slate-700 shadow-[0_14px_30px_-18px_rgba(15,23,42,0.35)] backdrop-blur-sm hover:bg-background"
             aria-label="Open settings"
             @click="router.push('/settings')"
           >
@@ -75,7 +61,7 @@ const mainInsetClass = computed(() =>
             </span>
           </Button>
         </div>
-      </header>
+      </div>
     </div>
 
     <main

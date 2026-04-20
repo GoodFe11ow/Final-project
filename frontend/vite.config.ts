@@ -24,16 +24,10 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/favicon.svg',
-            sizes: 'any',
+            src: '/IconObject.svg',
+            sizes: '1024x1024',
             type: 'image/svg+xml',
-            purpose: 'any',
-          },
-          {
-            src: '/icons.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'maskable',
+            purpose: 'any maskable',
           },
         ],
       },

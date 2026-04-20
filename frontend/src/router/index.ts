@@ -16,10 +16,11 @@ declare module 'vue-router' {
 }
 
 const routes = [
-  { path: '/welcome', component: Welcome, meta: { title: 'Welcome' } },
+  { path: '/', component: Welcome, meta: { title: 'Welcome' } },
+  { path: '/welcome', redirect: '/' },
   { path: '/login', component: Login, meta: { title: 'Log in' } },
   { path: '/register', component: Register, meta: { title: 'Sign up' } },
-  { path: '/', component: Home, meta: { title: 'Home' } },
+  { path: '/home', component: Home, meta: { title: 'Home' } },
   { path: '/focus', component: Focus, meta: { title: 'Focus' } },
   { path: '/tasks', component: Tasks, meta: { title: 'Tasks' } },
   { path: '/calendar', component: Calendar, meta: { title: 'Calendar' } },
@@ -39,4 +40,3 @@ router.afterEach((to) => {
 })
 
 export default router
-

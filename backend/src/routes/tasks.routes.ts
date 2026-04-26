@@ -3,23 +3,45 @@ import { prisma } from "../lib/prisma.js";
 import { createTaskSchema,
         taskIdParamsSchema,
         updateTaskStatusSchema,
+        getTasksQuerySchema
  } from "../validations/task.validation.js"
-
+import { userInfo } from "node:os";
 
 const tasksRouter = Router();
 
 
 
-tasksRouter.get("/tasks", async (_req, res, next) => {
+tasksRouter.get("/tasks", async (req, res, next) => {
     try {
-        const tasks = await prisma.task.findMany();
+        const queryResult = getTasksQuerySchema.safeParse(req.query);
+
+        if(!queryResult.success) {
+            return res.status(400).json({
+                ok: false,
+                message: "Invalid query params",
+                errors: queryResult.error.flatten().fieldErrors,
+            });
+        }
+
+        const tasks = await prisma.task.findMany({
+                where: {
+                    ...(queryResult.data.userId
+                        ? {userId: queryResult.data.userId}
+                        : {}),
+                    ...(queryResult.data.isCompleted !== undefined
+                        ? {isCompleted: queryResult.data.isCompleted} : {})
+                },
+                orderBy: {
+                    createdAt: "desc"
+                }
+        });
 
         return res.status(200).json({
             ok: true,
-            message: tasks,
+            data: tasks,
         })
     } catch (error) {
-        return next(error)
+        return next(error);
     }
 })
 
@@ -73,7 +95,7 @@ tasksRouter.get("/tasks/:id", async (req, res, next) => {
        })
 
        if (!task) {
-        return res.status(400).json({
+        return res.status(404).json({
             ok:false,
             message: "Task not found",
         });
@@ -107,7 +129,7 @@ tasksRouter.delete("/tasks/:id", async (req, res, next) => {
         })
 
         if(!existingTask) {
-            return res.status(400).json({
+            return res.status(404).json({
                 ok: false,
                 message: "Task not found",
 
@@ -158,7 +180,7 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
         })
 
         if(!existingTask) {
-            return res.status(400).json({
+            return res.status(404).json({
                 ok: false,
                 message: "Task not found"
             });

@@ -173,6 +173,19 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
             })
         }
 
+        const { title, description, isCompleted } = bodyResult.data;
+
+        if(
+            title === undefined && 
+            description === undefined &&
+            isCompleted === undefined
+        ) {
+            return res.status(400).json({
+                ok: false,
+                message: "At least one field is required to update"
+            });
+        }
+
         const existingTask = await prisma.task.findUnique({
             where: {
                 id: paramsResult.data.id,
@@ -191,15 +204,9 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
                 id: paramsResult.data.id,
             },
             data: {
-                ...(bodyResult.data.title !== undefined
-                    ? {title: bodyResult.data.title}
-                    : {}),
-                ...(bodyResult.data.description !== undefined
-                    ? {description: bodyResult.data.description}
-                    : {}),
-                ...(bodyResult.data.isCompleted !== undefined
-                    ? {isCompleted: bodyResult.data.isCompleted}
-                    : {}),
+                ...(title !== undefined ? {title} : {}),
+                ...(description !== undefined ? { description } : {}),
+                ...(isCompleted !== undefined ? { isCompleted } : {}),
             }
         });
 

@@ -10,8 +10,10 @@ export const taskIdParamsSchema = z.object({
     id: z.string().trim().cuid("task id must be a valid cuid"),
 });
 
-export const updateTaskStatusSchema = z.object({
-    isCompleted: z.boolean(),
+export const updateTaskSchema = z.object({
+    title: z.string().trim().min(1, "title cannot be empty").optional(),
+    description: z.string().trim().min(1, "description cannot be empty").optional(),
+    isCompleted: z.boolean().optional(),
 })
 
 export const getTasksQuerySchema = z.object({

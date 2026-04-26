@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { createTaskSchema,
         taskIdParamsSchema,
-        updateTaskStatusSchema,
+        updateTaskSchema,
         getTasksQuerySchema
  } from "../validations/task.validation.js"
 import { userInfo } from "node:os";
@@ -163,7 +163,7 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
             })
         }
 
-        const bodyResult = updateTaskStatusSchema.safeParse(req.body);
+        const bodyResult = updateTaskSchema.safeParse(req.body);
 
         if(!bodyResult.success) {
             return res.status(400).json({
@@ -191,7 +191,15 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
                 id: paramsResult.data.id,
             },
             data: {
-                isCompleted: bodyResult.data.isCompleted
+                ...(bodyResult.data.title !== undefined
+                    ? {title: bodyResult.data.title}
+                    : {}),
+                ...(bodyResult.data.description !== undefined
+                    ? {description: bodyResult.data.description}
+                    : {}),
+                ...(bodyResult.data.isCompleted !== undefined
+                    ? {isCompleted: bodyResult.data.isCompleted}
+                    : {}),
             }
         });
 

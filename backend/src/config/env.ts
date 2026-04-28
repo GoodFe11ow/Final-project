@@ -19,4 +19,5 @@ if(Number.isNaN(port)) {
 export const env = {
     PORT: port,
     DATABASE_URL: requireEnv("DATABASE_URL"),
+    APP_JWT_SECRET: requireEnv("APP_JWT_SECRET")
 };

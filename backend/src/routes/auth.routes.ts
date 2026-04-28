@@ -6,6 +6,9 @@ import { registerSchema,
  } from "../validations/auth.validation.js";
 import { env } from "../config/env.js"
 import jwt from "jsonwebtoken"
+import { requireAuth } from "../middlewares/require-auth.js";
+
+
 const authRouter = Router();
 
 //User registration
@@ -122,4 +125,10 @@ authRouter.post("/auth/login", async (req, res, next) => {
     }
 })
 
+authRouter.get("/auth/me", requireAuth, (req, res) => {
+    return res.status(200).json({
+        ok: true,
+        data: req.user,
+    })
+})
 export default authRouter;

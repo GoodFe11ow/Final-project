@@ -8,8 +8,10 @@ import { createTaskSchema,
         subtaskIdParamsSchema,
         updateSubtaskSchema
  } from "../validations/task.validation.js"
+ import { requireAuth } from "../middlewares/require-auth.js";
 
 const tasksRouter = Router();
+tasksRouter.use(requireAuth);
 
 
 // GET ALL TASKS
@@ -27,11 +29,10 @@ tasksRouter.get("/tasks", async (req, res, next) => {
 
         const tasks = await prisma.task.findMany({
                 where: {
-                    ...(queryResult.data.userId
-                        ? {userId: queryResult.data.userId}
-                        : {}),
+                    userId : req.user!.id,
                     ...(queryResult.data.isCompleted !== undefined
-                        ? {isCompleted: queryResult.data.isCompleted} : {})
+                    ? { isCompleted: queryResult.data.isCompleted }
+                    : {}), 
                 },
                 orderBy: {
                     createdAt: "desc"
@@ -60,13 +61,13 @@ tasksRouter.post("/tasks", async (req, res, next) => {
             });
         }
 
-        const { title, description, userId } = result.data;
+        const { title, description } = result.data;
 
         const task = await prisma.task.create({
             data: {
                 title,
                 description: description ?? null,
-                userId
+                userId: req.user!.id,
             }
         });
 
@@ -92,9 +93,10 @@ tasksRouter.get("/tasks/:id", async (req, res, next) => {
         });
        }
 
-       const task = await prisma.task.findUnique({
+       const task = await prisma.task.findFirst({
         where: {
             id: result.data.id,
+            userId: req.user!.id
         },
         include: {
             subtasks: true
@@ -130,9 +132,10 @@ tasksRouter.delete("/tasks/:id", async (req, res, next) => {
             });
         }
 
-        const existingTask = await prisma.task.findUnique({
+        const existingTask = await prisma.task.findFirst({
             where: {
                 id: result.data.id,
+                userId: req.user!.id,
             }
         })
 
@@ -195,9 +198,10 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
             });
         }
 
-        const existingTask = await prisma.task.findUnique({
+        const existingTask = await prisma.task.findFirst({
             where: {
                 id: paramsResult.data.id,
+                userId: req.user!.id,
             }
         })
 
@@ -224,7 +228,7 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
             data: updateTask,
         })
     } catch (error) {
-        next(error)
+        return next(error)
     }
 })
 
@@ -251,9 +255,10 @@ tasksRouter.post("/tasks/:id/subtasks", async (req, res, next) => {
             });
         }
 
-        const existingTask = await prisma.task.findUnique({
+        const existingTask = await prisma.task.findFirst({
             where: {
                 id: paramsResult.data.id,
+                userId: req.user!.id,
             },
         });
 
@@ -312,9 +317,10 @@ tasksRouter.patch("/tasks/:taskId/subtasks/:subtaskId", async (req, res, next) =
             })
         }
 
-        const existingTask = await prisma.task.findUnique({
+        const existingTask = await prisma.task.findFirst({
             where: {
                 id: paramsResult.data.taskId,
+                userId: req.user!.id
             },
         });
 
@@ -370,9 +376,10 @@ tasksRouter.delete("/tasks/:taskId/subtasks/:subtaskId", async (req, res, next) 
       });
     }
 
-    const existingTask = await prisma.task.findUnique({
+    const existingTask = await prisma.task.findFirst({
       where: {
         id: paramsResult.data.taskId,
+        userId: req.user!.id,
       },
     });
 
@@ -424,14 +431,15 @@ tasksRouter.get("/tasks/:taskId/subtasks/:subtaskId", async (req, res, next) => 
             });
         }
 
-        const existingTask = await prisma.task.findUnique({
+        const existingTask = await prisma.task.findFirst({
             where: {
                 id: paramsResult.data.taskId,
+                userId: req.user!.id
             },
         });
 
         if(!existingTask) {
-            return res.status(400).json({
+            return res.status(404).json({
                 ok: false,
                 message: "Task not found"
             });

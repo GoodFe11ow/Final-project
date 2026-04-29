@@ -7,6 +7,7 @@ import { registerSchema,
 import { env } from "../config/env.js"
 import jwt from "jsonwebtoken"
 import { requireAuth } from "../middlewares/require-auth.js";
+import { publicUserSelect } from "../lib/public-user-select.js";
 
 
 const authRouter = Router();
@@ -45,13 +46,7 @@ authRouter.post("/auth/register", async (req, res, next) =>{
                 email: result.data.email,
                 passwordHash,
             },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                createdAt: true,
-                updatedAt: true,
-            },
+            select: publicUserSelect,
         });
 
         return res.status(201).json({
@@ -80,6 +75,10 @@ authRouter.post("/auth/login", async (req, res, next) => {
             where: {
                 email: result.data.email,
             },
+            select: {
+                ...publicUserSelect,
+                passwordHash: true,
+            }
         });
 
         if(!user) {
@@ -107,17 +106,12 @@ authRouter.post("/auth/login", async (req, res, next) => {
             { expiresIn: "7d"},
         );
 
+        const { passwordHash, ...safeUser } = user;
         return res.status(200).json({
             ok: true,
             data: {
                 token,
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    createdAt: user.createdAt,
-                    updatedAt: user.updatedAt,
-                },
+                user: safeUser,
             },
         });
     } catch (error) {

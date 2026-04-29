@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
+import { publicUserSelect } from "../lib/public-user-select.js";
 
 export async function requireAuth(
     req: Request,
@@ -42,13 +43,7 @@ export async function requireAuth(
             where: {
                 id: payload.userId,
             },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                createdAt: true,
-                updatedAt: true,
-            },
+            select: publicUserSelect,
         });
 
         if(!user) {

@@ -22,11 +22,17 @@ import {
   useTimerSettingsStore,
   type TimerSettingKey,
 } from '@/stores/timer-settings'
+import { useAuthStore } from '@/stores/auth'
 
 type NotificationSettingKey = 'focus-reminders' | 'daily-summary'
 type SettingsThemeMode = 'light' | 'dark'
 
 const router = useRouter()
+const authStore = useAuthStore()
+function hanldeLogout() {
+  authStore.logout()
+  router.push('/')
+}
 const timerSettingsStore = useTimerSettingsStore()
 const { breakDurationSeconds, focusDurationSeconds } = storeToRefs(timerSettingsStore)
 
@@ -400,7 +406,7 @@ function getThemeToggleButtonClass(themeMode: SettingsThemeMode) {
               ? 'border-red-400/60 bg-transparent text-red-400 hover:bg-red-500/10 hover:text-red-300'
               : 'border-red-300 text-red-500 hover:bg-red-50 hover:text-red-600'
           "
-          @click="router.push('/')"
+          @click="hanldeLogout"
         >
           <LogOut class="size-4" />
           Log out

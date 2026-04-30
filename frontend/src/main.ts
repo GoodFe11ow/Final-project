@@ -6,6 +6,7 @@ import { pinia } from './stores'
 import { registerSW } from 'virtual:pwa-register'
 import { useAuthStore } from './stores/auth'
 
+ async function bootstrap() {
 const app = createApp(App)
 
 app.use(pinia)
@@ -17,3 +18,6 @@ app.use(router)
 app.mount('#app')
 
 registerSW({ immediate: true })
+}
+
+void bootstrap()

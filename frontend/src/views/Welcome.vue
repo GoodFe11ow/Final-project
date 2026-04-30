@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import { Rocket } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 </script>
 
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button'
     <section class="w-full max-w-sm rounded-3xl bg-background px-6 py-12 shadow-sm">
       <div class="mx-auto max-w-xs space-y-10 text-center">
         <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-500 text-primary">
-          <Rocket class="h-7 w-7 text-white" />
+          <img src="/IconObject.svg" alt="Productivity App logo" class="h-8 w-8 object-contain" />
         </div>
 
         <div class="space-y-2">

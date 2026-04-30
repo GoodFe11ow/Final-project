@@ -4,12 +4,16 @@ import './style.css'
 import router from './router'
 import { pinia } from './stores'
 import { registerSW } from 'virtual:pwa-register'
+import { useAuthStore } from './stores/auth'
 
 const app = createApp(App)
 
 app.use(pinia)
-app.use(router)
 
+const authStore = useAuthStore(pinia)
+await authStore.fetchMe()
+
+app.use(router)
 app.mount('#app')
 
 registerSW({ immediate: true })

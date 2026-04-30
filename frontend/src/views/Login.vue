@@ -5,12 +5,34 @@ import { useRouter } from 'vue-router'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const isPasswordVisible = ref(false)
+const authStore = useAuthStore()
 
-function handleSubmit() {
-  router.push('/home')
+const isPasswordVisible =ref(false)
+const email = ref('')
+const password = ref('')
+const errorMessage = ref('')
+const isSubmitting = ref(false)
+
+async function handleSubmit() {
+  errorMessage.value = ''
+
+  try {
+    isSubmitting.value = true
+
+    await authStore.login({
+      email: email.value,
+      password: password.value,
+    })
+
+    router.push('/home')
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Login failed'
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -24,13 +46,14 @@ function handleSubmit() {
       <form class="mt-14 space-y-6" @submit.prevent="handleSubmit">
         <div class="space-y-2">
           <label class="text-sm font-medium text-foreground/90" for="login-identity">Email</label>
-          <Input id="login-identity" type="text" placeholder="Enter your email" autocomplete="username" class="h-12 rounded-xl bg-white/80" />
+          <Input id="login-identity" v-model="email" type="text" placeholder="Enter your email" autocomplete="username" class="h-12 rounded-xl bg-white/80" />
         </div>
         <div class="space-y-2">
           <label class="text-sm font-medium text-foreground/90" for="login-password">Password</label>
           <div class="relative">
             <Input
               id="login-password"
+              v-model="password"
               :type="isPasswordVisible ? 'text' : 'password'"
               placeholder="Enter your password"
               autocomplete="current-password"
@@ -48,9 +71,10 @@ function handleSubmit() {
           </div>
         </div>
 
-        <Button type="submit" class="mt-2 h-12 w-full rounded-xl bg-blue-500 hover:bg-blue-600 text-base shadow-md">
-          Log in
+        <Button type="submit" :disabled="isSubmitting" class="mt-2 h-12 w-full rounded-xl bg-blue-500 hover:bg-blue-600 text-base shadow-md">
+          {{  isSubmitting ? 'Logging in...' : 'Log in' }}
         </Button>
+        <p v-if="errorMessage" class="text-sm text-red-500">{{ errorMessage }}</p>
       </form>
 
       <p class="mt-10 text-center text-sm text-foreground/70">

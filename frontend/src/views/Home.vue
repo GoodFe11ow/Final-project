@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Check, Clock3, Flame, Music2, Play, Plus } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
 
 type HomeTask = {
   title: string
@@ -18,9 +21,11 @@ type QuickAction = {
 }
 
 const router = useRouter()
+const authStore = useAuthStore()
+const { user } = storeToRefs(authStore)
 
 const todayLabel = 'Thursday, 24 Oct'
-const userName = 'User'
+const userName = computed(() => user.value?.name ?? 'User')
 
 const currentTasks: HomeTask[] = [
   {

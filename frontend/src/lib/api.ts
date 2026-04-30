@@ -1,13 +1,19 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
 
-type ApiRequestOptions = RequestInit
+type ApiRequestOptions = RequestInit & {
+    token?: string
+}
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
+    
+    const { token, headers, ...rest } = options
+    
     const response = await fetch(`${API_URL}${path}`, {
-        ...options,
+        ...rest,
         headers: {
             'Content-Type': 'application/json',
-            ...(options.headers ?? {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(headers ?? {})
         },
     })
     

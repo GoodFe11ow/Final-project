@@ -6,7 +6,7 @@ type AuthUser = {
     name: string
     email: string
     createdAt: string
-    updateddAt: string
+    updatedAt: string
 }
 
 type LoginResponse = {

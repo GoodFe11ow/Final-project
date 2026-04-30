@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { apiRequest } from '@/lib/api'
+import { useAuthStore } from './auth'
 
 export type TaskSubtask = {
   id: string
@@ -153,9 +155,46 @@ const initialTasks: TaskItem[] = [
   },
 ]
 
+type BackendSubtask = {
+  id: string
+  title: string
+  isCompleted: boolean
+}
+
+type BackendTask = {
+  id: string
+  title: string
+  description: string | null
+  assignatedDate: string | null
+  isCompleted: boolean
+  subtasks: BackendSubtask[]
+}
+
+type GetTasksResponse = {
+  ok: true
+  data: BackendTask[]
+}
+
+function mapBackendTask(task: BackendTask): TaskItem {
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description ?? '',
+    assignedDate: task.assignatedDate ? task.assignatedDate.slice(0, 10) : '',
+    completed: task.isCompleted,
+    subtasks: task.subtasks.map((subtask) => ({
+      id: subtask.id,
+      title: subtask.title,
+      completed: subtask.isCompleted,
+    })),
+  }
+}
+
 export const useTasksStore = defineStore('tasks', {
   state: () => ({
-    tasks: initialTasks as TaskItem[],
+    tasks: [] as TaskItem[],
+    isLoading: false,
+    errorMessage: '',
   }),
   actions: {
     createTask(draft: TaskDraft) {
@@ -210,5 +249,28 @@ export const useTasksStore = defineStore('tasks', {
     deleteTask(taskId: string) {
       this.tasks = this.tasks.filter((task) => task.id !== taskId)
     },
+    async fetchTasks() {
+      const authStore = useAuthStore()
+
+      if(!authStore.token) {
+        this.tasks = []
+        return
+      }
+
+      this.isLoading = true
+      this.errorMessage = ''
+
+      try {
+        const response = await apiRequest<GetTasksResponse>('/tasks', {
+          token: authStore.token,
+        })
+        
+        this.tasks = response.data.map(mapBackendTask)
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Failed to load tasks'  
+      } finally {
+        this.isLoading = false
+      }
+    }
   },
 })

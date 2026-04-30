@@ -34,6 +34,9 @@ tasksRouter.get("/tasks", async (req, res, next) => {
                     ? { isCompleted: queryResult.data.isCompleted }
                     : {}), 
                 },
+                include: {
+                    subtasks: true
+                },
                 orderBy: {
                     createdAt: "desc"
                 }

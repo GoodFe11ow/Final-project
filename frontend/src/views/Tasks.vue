@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppShell from '@/components/layout/AppShell.vue'
 import { Button } from '@/components/ui/button'
@@ -35,7 +35,11 @@ type TaskFormState = {
 }
 
 const tasksStore = useTasksStore()
-const { tasks } = storeToRefs(tasksStore)
+const { tasks, isLoading, errorMessage } = storeToRefs(tasksStore)
+
+onMounted(() => {
+  void tasksStore.fetchTasks()
+})
 
 const selectedTaskId = ref<string | null>(null)
 const dialogMode = ref<DialogMode | null>(null)
@@ -208,8 +212,14 @@ function progressMessage(task: TaskItem) {
             Tasks
           </h2>
         </header>
+        <div v-if="isLoading" class="flex flex-1 items-center justify-center">
+          <p class="text-slate-500">Loading tasks...</p>
+        </div>
+        <div v-else-if="errorMessage" class="flex flex-1 items-center justify-center px-6 text-center">
+          <p class="text-red-500">{{ errorMessage }}</p>
+        </div>
 
-        <div v-if="sortedTasks.length === 0" class="flex flex-1 items-center">
+        <div v-else-if="sortedTasks.length === 0" class="flex flex-1 items-center">
           <div class="flex w-full flex-1 flex-col items-center justify-center px-6 text-center">
             <div
               class="flex size-20 items-center justify-center rounded-full border-[3px] border-blue-400 text-blue-500"

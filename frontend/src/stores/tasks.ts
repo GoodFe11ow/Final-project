@@ -49,7 +49,8 @@ function nextDate(offsetDays = 0) {
   date.setDate(date.getDate() + offsetDays)
 
   return date.toISOString().slice(0, 10)
-}
+}//TODO: delete later
+
 
 function normalizeSubtasks(
   subtasks: TaskDraftSubtask[],
@@ -153,7 +154,7 @@ const initialTasks: TaskItem[] = [
       { id: createId('subtask'), title: 'Confirm attendees', completed: true },
     ],
   },
-]
+]//TODO: delete later
 
 type BackendSubtask = {
   id: string
@@ -174,6 +175,15 @@ type GetTasksResponse = {
   ok: true
   data: BackendTask[]
 }
+ type CreateTaskResponse = {
+  ok: true
+  data: BackendTask
+ }
+
+ type DeleteTaskResponse = {
+  ok: true
+  message: string
+ }
 
 function mapBackendTask(task: BackendTask): TaskItem {
   return {
@@ -197,20 +207,46 @@ export const useTasksStore = defineStore('tasks', {
     errorMessage: '',
   }),
   actions: {
-    createTask(draft: TaskDraft) {
-      const task: TaskItem = {
-        id: createId('task'),
-        title: draft.title.trim(),
-        description: draft.description.trim(),
-        assignedDate: draft.assignedDate,
-        completed: false,
-        subtasks: normalizeSubtasks(draft.subtasks),
+     async createTask(draft: TaskDraft) {
+      const authStore = useAuthStore()
+
+      if(!authStore.token) {
+        throw new Error('Unauthorized')
       }
 
-      task.completed = getTaskProgress(task).isComplete
-      this.tasks.unshift(task)
+      this.errorMessage = ''
+      
+      try {
+        const response = await apiRequest<CreateTaskResponse>('/tasks', {
+          method: 'POST',
+          token: authStore.token,
+          body: JSON.stringify({
+            title: draft.title.trim(),
+            description: draft.description.trim(),
+            assignedDate: draft.assignedDate,
+          }),
+        })
 
-      return task
+        const subtaskTitles = draft.subtasks
+          .map((subtask) => subtask.title.trim())
+          .filter((title) => title.length > 0)
+
+          for (const title of subtaskTitles) {
+            await apiRequest(`/tasks/${response.data.id}/subtasks`, {
+              method: 'POST',
+              token: authStore.token,
+              body: JSON.stringify({ title }),
+            })
+          }
+
+          await this.fetchTasks()
+
+          return response.data
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Failed to create task'
+
+        throw error
+      }
     },
     updateTask(taskId: string, draft: TaskDraft) {
       const task = this.tasks.find((item) => item.id === taskId)
@@ -231,7 +267,7 @@ export const useTasksStore = defineStore('tasks', {
 
       subtask.completed = !subtask.completed
       task.completed = getTaskProgress(task).isComplete
-    },
+    },//TODO: delete later, has no use
     markTaskComplete(taskId: string) {
       const task = this.tasks.find((item) => item.id === taskId)
 
@@ -246,8 +282,26 @@ export const useTasksStore = defineStore('tasks', {
 
       task.completed = true
     },
-    deleteTask(taskId: string) {
-      this.tasks = this.tasks.filter((task) => task.id !== taskId)
+    async deleteTask(taskId: string) {
+      const authStore = useAuthStore()
+
+      if(!authStore.token) {
+        throw new Error('Unauthorized')
+      }
+
+      this.errorMessage = ''
+
+      try {
+        await apiRequest<DeleteTaskResponse>(`/tasks/${taskId}`, {
+          method: 'DELETE',
+          token: authStore.token,
+        })
+
+        this.tasks = this.tasks.filter((task) => task.id !== taskId)
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Failed to delete task'
+        throw error
+      }
     },
     async fetchTasks() {
       const authStore = useAuthStore()

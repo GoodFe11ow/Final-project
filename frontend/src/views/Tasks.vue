@@ -13,8 +13,11 @@ import {
   CalendarDays,
   Check,
   Circle,
+  LoaderCircle,
+  LoaderPinwheel,
   Pencil,
   Plus,
+  RefreshCw,
   Trash2,
   X,
 } from 'lucide-vue-next'
@@ -44,6 +47,16 @@ onMounted(() => {
 const selectedTaskId = ref<string | null>(null)
 const dialogMode = ref<DialogMode | null>(null)
 const taskForm = reactive<TaskFormState>(createEmptyTaskForm())
+const isSavingTask = ref(false)
+const isDeletingTask = ref(false)
+
+const saveButtonLabel = computed(() => {
+  if (isSavingTask.value) {
+    return isCreateMode.value ? 'Creating...' : 'Saving...'
+  }
+
+  return submitLabel.value
+})
 
 const sortedTasks = computed(() => {
   return [...tasks.value].sort((left, right) => Number(left.completed) - Number(right.completed))
@@ -154,8 +167,8 @@ function goBackToList() {
   selectedTaskId.value = null
 }
 
-function saveTask() {
-  if (!canSubmitForm.value) return
+ async function saveTask() {
+  if (!canSubmitForm.value || isSavingTask.value) return
 
   const payload = {
     title: taskForm.title,
@@ -163,21 +176,29 @@ function saveTask() {
     assignedDate: taskForm.assignedDate,
     subtasks: taskForm.subtasks,
   }
+  isSavingTask.value = true
 
-  if (isCreateMode.value) {
-    tasksStore.createTask(payload)
-  } else if (selectedTask.value) {
+  try {
+    if (isCreateMode.value) {
+     await tasksStore.createTask(payload)
+     closeDialog()
+     return
+  } 
+
+  if(selectedTask.value) {
     tasksStore.updateTask(selectedTask.value.id, payload)
+    closeDialog()
   }
-
-  closeDialog()
+  } finally {
+    isSavingTask.value = false
+  }
 }
 
 function toggleSelectedSubtask(subtaskId: string) {
   if (!selectedTask.value) return
 
   tasksStore.toggleSubtask(selectedTask.value.id, subtaskId)
-}
+}//TODO: delete later
 
 function markSelectedTaskComplete() {
   if (!selectedTask.value) return
@@ -185,11 +206,17 @@ function markSelectedTaskComplete() {
   tasksStore.markTaskComplete(selectedTask.value.id)
 }
 
-function deleteSelectedTask() {
-  if (!selectedTask.value) return
+ async function deleteSelectedTask() {
+  if (!selectedTask.value || isDeletingTask.value) return
 
-  tasksStore.deleteTask(selectedTask.value.id)
-  selectedTaskId.value = null
+  isDeletingTask.value = true
+
+  try {
+    await tasksStore.deleteTask(selectedTask.value.id)
+    selectedTaskId.value = null
+  } finally {
+    isDeletingTask.value = false
+  }
 }
 
 function progressMessage(task: TaskItem) {
@@ -213,7 +240,10 @@ function progressMessage(task: TaskItem) {
           </h2>
         </header>
         <div v-if="isLoading" class="flex flex-1 items-center justify-center">
-          <p class="text-slate-500">Loading tasks...</p>
+          <div class="flex items-center gap-3 text-slate-500">
+            <LoaderPinwheel class="size-5 animate-spin text-blue-500" />
+            <p>Loading tasks...</p>
+          </div>
         </div>
         <div v-else-if="errorMessage" class="flex flex-1 items-center justify-center px-6 text-center">
           <p class="text-red-500">{{ errorMessage }}</p>
@@ -407,10 +437,12 @@ function progressMessage(task: TaskItem) {
           type="button"
           variant="outline"
           class="h-14 rounded-[1.2rem] border-red-200 bg-white text-base font-semibold text-red-500 shadow-[0_16px_28px_-24px_rgba(239,68,68,0.45)] hover:bg-red-50 hover:text-red-600"
+          :disabled="isDeletingTask"
           @click="deleteSelectedTask"
         >
-          <Trash2 class="size-4" />
-          Delete Task
+          <LoaderCircle v-if="isDeletingTask" class="size-4 animate-spin" />
+          <Trash2 v-else class="size-4" />
+          {{ isDeletingTask ? 'Deleting...' : 'Delete Task' }}
         </Button>
       </template>
 
@@ -432,14 +464,7 @@ function progressMessage(task: TaskItem) {
                 {{ dialogTitle }}
               </DialogTitle>
 
-              <Button
-                type="submit"
-                variant="ghost"
-                class="px-0 text-sm font-semibold text-blue-500 hover:bg-transparent hover:text-blue-600"
-                :disabled="!canSubmitForm"
-              >
-                Save
-              </Button>
+              <div class="size-8" aria-hidden="true" />
             </div>
 
             <div class="space-y-5 px-5 py-5">
@@ -535,9 +560,10 @@ function progressMessage(task: TaskItem) {
               <Button
                 type="submit"
                 class="mt-2 h-14 w-full rounded-[1.2rem] bg-blue-500 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-                :disabled="!canSubmitForm"
+                :disabled="!canSubmitForm || isSavingTask"
               >
-                {{ submitLabel }}
+                <RefreshCw v-if="isSavingTask" class="size-4 animate-spin" />
+                <span>{{ saveButtonLabel }}</span>
               </Button>
             </div>
           </form>

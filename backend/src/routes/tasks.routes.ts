@@ -64,12 +64,13 @@ tasksRouter.post("/tasks", async (req, res, next) => {
             });
         }
 
-        const { title, description } = result.data;
+        const { title, description, assignedDate } = result.data;
 
         const task = await prisma.task.create({
             data: {
                 title,
                 description: description ?? null,
+                assignatedDate: assignedDate ? new Date(`${assignedDate}T00:00:00.00Z`) : null,
                 userId: req.user!.id,
             }
         });

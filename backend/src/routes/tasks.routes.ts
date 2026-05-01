@@ -189,11 +189,12 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
             })
         }
 
-        const { title, description, isCompleted } = bodyResult.data;
+        const { title, description, assignedDate, isCompleted } = bodyResult.data;
 
         if(
             title === undefined && 
             description === undefined &&
+            assignedDate === undefined &&
             isCompleted === undefined
         ) {
             return res.status(400).json({
@@ -223,6 +224,13 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
             data: {
                 ...(title !== undefined ? {title} : {}),
                 ...(description !== undefined ? { description } : {}),
+                ...(assignedDate !== undefined
+                    ? {
+                        assignatedDate: assignedDate
+                            ? new Date(`${assignedDate}T00:00:00.000Z`)
+                            : null,
+                    }
+                : {}),
                 ...(isCompleted !== undefined ? { isCompleted } : {}),
             }
         });

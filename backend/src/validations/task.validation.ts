@@ -13,6 +13,12 @@ export const taskIdParamsSchema = z.object({
 export const updateTaskSchema = z.object({
     title: z.string().trim().min(1, "title cannot be empty").optional(),
     description: z.string().trim().min(1, "description cannot be empty").optional(),
+    assignedDate: z
+        .union([
+            z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "assignedDate must be in YYYY-MM-DD format"),
+            z.literal(''),
+        ])
+        .optional(),
     isCompleted: z.boolean().optional(),
 })
 

@@ -167,7 +167,7 @@ function goBackToList() {
   selectedTaskId.value = null
 }
 
- async function saveTask() {
+async function saveTask() {
   if (!canSubmitForm.value || isSavingTask.value) return
 
   const payload = {
@@ -180,15 +180,15 @@ function goBackToList() {
 
   try {
     if (isCreateMode.value) {
-     await tasksStore.createTask(payload)
-     closeDialog()
-     return
-  } 
+      await tasksStore.createTask(payload)
+      closeDialog()
+      return
+    }
 
-  if(selectedTask.value) {
-    tasksStore.updateTask(selectedTask.value.id, payload)
-    closeDialog()
-  }
+    if (selectedTask.value) {
+      await tasksStore.updateTask(selectedTask.value.id, payload)
+      closeDialog()
+    }
   } finally {
     isSavingTask.value = false
   }
@@ -206,7 +206,7 @@ function markSelectedTaskComplete() {
   tasksStore.markTaskComplete(selectedTask.value.id)
 }
 
- async function deleteSelectedTask() {
+async function deleteSelectedTask() {
   if (!selectedTask.value || isDeletingTask.value) return
 
   isDeletingTask.value = true
@@ -252,18 +252,15 @@ function progressMessage(task: TaskItem) {
         <div v-else-if="sortedTasks.length === 0" class="flex flex-1 items-center">
           <div class="flex w-full flex-1 flex-col items-center justify-center px-6 text-center">
             <div
-              class="flex size-20 items-center justify-center rounded-full border-[3px] border-blue-400 text-blue-500"
-            >
+              class="flex size-20 items-center justify-center rounded-full border-[3px] border-blue-400 text-blue-500">
               <Check class="size-10 stroke-[2.4]" />
             </div>
             <p class="mt-8 max-w-[15.5rem] text-[1.1rem] font-medium leading-8 text-slate-600">
               No tasks yet. Start your journey by creating your first task.
             </p>
-            <Button
-              type="button"
+            <Button type="button"
               class="mt-16 h-14 rounded-[1.1rem] bg-blue-500 px-8 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-              @click="openCreateDialog"
-            >
+              @click="openCreateDialog">
               <Plus class="size-4" />
               Add New Task
             </Button>
@@ -271,57 +268,39 @@ function progressMessage(task: TaskItem) {
         </div>
 
         <div v-else class="flex flex-1 flex-col gap-4">
-          <button
-            v-for="task in sortedTasks"
-            :key="task.id"
-            type="button"
-            class="text-left"
-            @click="openTaskDetails(task.id)"
-          >
+          <button v-for="task in sortedTasks" :key="task.id" type="button" class="text-left"
+            @click="openTaskDetails(task.id)">
             <Card
               class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
-              :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'"
-            >
+              :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
               <CardContent class="p-4">
                 <div class="flex items-start justify-between gap-3">
-                  <h3
-                    class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
-                    :class="task.completed ? 'text-slate-500' : 'text-slate-800'"
-                  >
+                  <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
+                    :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
                     {{ task.title }}
                   </h3>
 
                   <div class="flex items-center gap-2">
-                    <span
-                      class="text-sm font-semibold"
-                      :class="task.completed ? 'text-slate-500' : 'text-blue-500'"
-                    >
+                    <span class="text-sm font-semibold" :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
                       {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
                     </span>
-                    <span
-                      v-if="task.completed"
-                      class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white"
-                    >
+                    <span v-if="task.completed"
+                      class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
                       <Check class="size-3.5 stroke-[3]" />
                     </span>
                   </div>
                 </div>
 
-                <Progress
-                  :model-value="getTaskProgress(task).percent"
-                  class="mt-5 h-2"
-                  :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'"
-                />
+                <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
+                  :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
               </CardContent>
             </Card>
           </button>
 
           <div class="mt-auto flex justify-center pt-4">
-            <Button
-              type="button"
+            <Button type="button"
               class="h-14 rounded-[1.15rem] bg-blue-500 px-9 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-              @click="openCreateDialog"
-            >
+              @click="openCreateDialog">
               Add New Task
             </Button>
           </div>
@@ -330,13 +309,8 @@ function progressMessage(task: TaskItem) {
 
       <template v-else>
         <header class="flex items-center justify-between gap-3 pt-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            class="rounded-full text-blue-500 hover:bg-blue-50 hover:text-blue-600"
-            @click="goBackToList"
-          >
+          <Button type="button" variant="ghost" size="icon-sm"
+            class="rounded-full text-blue-500 hover:bg-blue-50 hover:text-blue-600" @click="goBackToList">
             <ArrowLeft class="size-5" />
           </Button>
 
@@ -344,13 +318,8 @@ function progressMessage(task: TaskItem) {
             Task Details
           </h2>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            class="rounded-full text-blue-500 hover:bg-blue-50 hover:text-blue-600"
-            @click="openEditDialog"
-          >
+          <Button type="button" variant="ghost" size="icon-sm"
+            class="rounded-full text-blue-500 hover:bg-blue-50 hover:text-blue-600" @click="openEditDialog">
             <Pencil class="size-4" />
           </Button>
         </header>
@@ -373,31 +342,17 @@ function progressMessage(task: TaskItem) {
             </h3>
 
             <div class="mt-4 space-y-4">
-              <div
-                v-for="subtask in selectedTask.subtasks"
-                :key="subtask.id"
-                class="flex items-center gap-3"
-              >
-                <Checkbox
-                  :model-value="subtask.completed"
-                  @update:model-value="toggleSelectedSubtask(subtask.id)"
-                />
-                <span
-                  class="text-[1.02rem]"
-                  :class="
-                    subtask.completed
-                      ? 'text-slate-400 line-through'
-                      : 'text-slate-700'
-                  "
-                >
+              <div v-for="subtask in selectedTask.subtasks" :key="subtask.id" class="flex items-center gap-3">
+                <Checkbox :model-value="subtask.completed" @update:model-value="toggleSelectedSubtask(subtask.id)" />
+                <span class="text-[1.02rem]" :class="subtask.completed
+                  ? 'text-slate-400 line-through'
+                  : 'text-slate-700'
+                  ">
                   {{ subtask.title }}
                 </span>
               </div>
 
-              <p
-                v-if="selectedTask.subtasks.length === 0"
-                class="text-sm text-slate-400"
-              >
+              <p v-if="selectedTask.subtasks.length === 0" class="text-sm text-slate-400">
                 No subtasks yet.
               </p>
             </div>
@@ -413,10 +368,7 @@ function progressMessage(task: TaskItem) {
               </span>
             </div>
 
-            <Progress
-              :model-value="selectedTaskProgress?.percent ?? 0"
-              class="mt-5 h-2.5"
-            />
+            <Progress :model-value="selectedTaskProgress?.percent ?? 0" class="mt-5 h-2.5" />
 
             <p class="mt-5 text-center text-sm text-slate-400">
               {{ progressMessage(selectedTask) }}
@@ -424,22 +376,15 @@ function progressMessage(task: TaskItem) {
           </CardContent>
         </Card>
 
-        <Button
-          type="button"
+        <Button type="button"
           class="h-14 rounded-[1.2rem] bg-blue-500 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-          :disabled="selectedTask.completed"
-          @click="markSelectedTaskComplete"
-        >
+          :disabled="selectedTask.completed" @click="markSelectedTaskComplete">
           {{ selectedTask.completed ? 'Task Completed' : 'Mark as Complete' }}
         </Button>
 
-        <Button
-          type="button"
-          variant="outline"
+        <Button type="button" variant="outline"
           class="h-14 rounded-[1.2rem] border-red-200 bg-white text-base font-semibold text-red-500 shadow-[0_16px_28px_-24px_rgba(239,68,68,0.45)] hover:bg-red-50 hover:text-red-600"
-          :disabled="isDeletingTask"
-          @click="deleteSelectedTask"
-        >
+          :disabled="isDeletingTask" @click="deleteSelectedTask">
           <LoaderCircle v-if="isDeletingTask" class="size-4 animate-spin" />
           <Trash2 v-else class="size-4" />
           {{ isDeletingTask ? 'Deleting...' : 'Delete Task' }}
@@ -450,13 +395,8 @@ function progressMessage(task: TaskItem) {
         <DialogContent class="max-w-[23rem] overflow-hidden rounded-[1.9rem] border-white/80 p-0">
           <form class="bg-white" @submit.prevent="saveTask">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                class="rounded-full text-slate-500 hover:bg-slate-100"
-                @click="closeDialog"
-              >
+              <Button type="button" variant="ghost" size="icon-sm"
+                class="rounded-full text-slate-500 hover:bg-slate-100" @click="closeDialog">
                 <X class="size-5" />
               </Button>
 
@@ -472,71 +412,49 @@ function progressMessage(task: TaskItem) {
                 <label class="text-sm font-medium text-slate-500" for="task-title">
                   Task name
                 </label>
-                <Input
-                  id="task-title"
-                  v-model="taskForm.title"
-                  type="text"
-                  placeholder="Enter task name"
-                  class="h-12 rounded-xl bg-[#f4f6ff] text-base shadow-none"
-                />
+                <Input id="task-title" v-model="taskForm.title" type="text" placeholder="Enter task name"
+                  class="h-12 rounded-xl bg-[#f4f6ff] text-base shadow-none" />
               </div>
 
               <div class="space-y-2">
                 <label class="text-sm font-medium text-slate-500" for="task-description">
                   Description
                 </label>
-                <textarea
-                  id="task-description"
-                  v-model="taskForm.description"
-                  rows="4"
-                  placeholder="Enter description"
-                  class="flex w-full resize-none rounded-xl border border-input bg-[#f4f6ff] px-4 py-3 text-base shadow-none outline-none transition-colors placeholder:text-slate-300 focus-visible:ring-1 focus-visible:ring-ring"
-                />
+                <textarea id="task-description" v-model="taskForm.description" rows="4" placeholder="Enter description"
+                  class="flex w-full resize-none rounded-xl border border-input bg-[#f4f6ff] px-4 py-3 text-base shadow-none outline-none transition-colors placeholder:text-slate-300 focus-visible:ring-1 focus-visible:ring-ring" />
               </div>
 
-              <div class="space-y-3">
+              <div v-if="isCreateMode" class="space-y-3">
                 <p class="text-[0.8rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
                   Subtask
                 </p>
 
                 <div v-if="taskForm.subtasks.length > 0" class="space-y-3">
-                  <div
-                    v-for="(subtask, index) in taskForm.subtasks"
-                    :key="subtask.id ?? `subtask-${index}`"
-                    class="flex items-center gap-3 rounded-xl bg-[#f4f6ff] px-3 py-2.5 transition-shadow"
-                  >
+                  <div v-for="(subtask, index) in taskForm.subtasks" :key="subtask.id ?? `subtask-${index}`"
+                    class="flex items-center gap-3 rounded-xl bg-[#f4f6ff] px-3 py-2.5 transition-shadow">
                     <span class="flex shrink-0 items-center text-slate-300">
                       <Circle class="size-4" />
                     </span>
-                    <Input
-                      v-model="subtask.title"
-                      type="text"
-                      placeholder="Write subtask"
-                      class="h-10 border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
+                    <Input v-model="subtask.title" type="text" placeholder="Write subtask"
+                      class="h-10 border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0" />
+                    <Button type="button" variant="ghost" size="icon-sm"
                       class="shrink-0 rounded-full text-slate-400 hover:bg-white hover:text-red-500"
-                      aria-label="Delete subtask"
-                      @click="removeSubtaskField(index)"
-                    >
+                      aria-label="Delete subtask" @click="removeSubtaskField(index)">
                       <X class="size-4" />
                     </Button>
                   </div>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
+                <Button type="button" variant="outline"
                   class="h-12 w-full rounded-xl border-blue-200 text-base font-medium text-blue-500 hover:bg-blue-50 hover:text-blue-600"
-                  @click="addSubtaskField"
-                >
+                  @click="addSubtaskField">
                   <Plus class="size-4" />
                   Add subtask
                 </Button>
               </div>
+              <p v-else class="text-sm text-slate-400">
+                Subtask editing will be connected next.
+              </p>
 
               <div class="flex items-center gap-4 rounded-[1.25rem] bg-[#f4f6ff] px-4 py-4">
                 <span class="flex size-10 items-center justify-center rounded-full bg-white text-slate-500">
@@ -549,19 +467,13 @@ function progressMessage(task: TaskItem) {
                   </p>
                 </div>
 
-                <Input
-                  id="task-assigned-date"
-                  v-model="taskForm.assignedDate"
-                  type="date"
-                  class="h-11 w-[10rem] rounded-xl border-white bg-white px-3 text-sm font-medium text-slate-700 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.28)] focus-visible:ring-1"
-                />
+                <Input id="task-assigned-date" v-model="taskForm.assignedDate" type="date"
+                  class="h-11 w-[10rem] rounded-xl border-white bg-white px-3 text-sm font-medium text-slate-700 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.28)] focus-visible:ring-1" />
               </div>
 
-              <Button
-                type="submit"
+              <Button type="submit"
                 class="mt-2 h-14 w-full rounded-[1.2rem] bg-blue-500 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-                :disabled="!canSubmitForm || isSavingTask"
-              >
+                :disabled="!canSubmitForm || isSavingTask">
                 <RefreshCw v-if="isSavingTask" class="size-4 animate-spin" />
                 <span>{{ saveButtonLabel }}</span>
               </Button>

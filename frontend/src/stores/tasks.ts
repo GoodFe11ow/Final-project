@@ -184,6 +184,11 @@ type GetTasksResponse = {
   ok: true
   message: string
  }
+ 
+ type UpdateTaskResponse = {
+    ok: true
+    data: BackendTask
+ }
 
 function mapBackendTask(task: BackendTask): TaskItem {
   return {
@@ -248,16 +253,32 @@ export const useTasksStore = defineStore('tasks', {
         throw error
       }
     },
-    updateTask(taskId: string, draft: TaskDraft) {
-      const task = this.tasks.find((item) => item.id === taskId)
+     async updateTask(taskId: string, draft: TaskDraft) {
+      const authStore = useAuthStore()
 
-      if (!task) return
+      if(!authStore.token) {
+        throw new Error('Unauthorized')
+      }
 
-      task.title = draft.title.trim()
-      task.description = draft.description.trim()
-      task.assignedDate = draft.assignedDate
-      task.subtasks = normalizeSubtasks(draft.subtasks, task.subtasks)
-      task.completed = getTaskProgress(task).isComplete
+      this.errorMessage = ''
+
+      try {
+        await apiRequest<UpdateTaskResponse>(`/tasks/${taskId}`, {
+          method: 'PATCH',
+          token: authStore.token,
+          body: JSON.stringify({
+            title: draft.title.trim(),
+            description: draft.description.trim(),
+            assignedDate: draft.assignedDate,
+          }),
+        })
+
+        await this.fetchTasks()
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Failed to update task'
+
+        throw error
+      }
     },
     toggleSubtask(taskId: string, subtaskId: string) {
       const task = this.tasks.find((item) => item.id === taskId)

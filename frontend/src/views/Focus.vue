@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useTimerSettingsStore } from '@/stores/timer-settings'
 import {
-  CheckCircle2,
+  Check,
   ChevronRight,
+  ClipboardList,
   Coffee,
+  Flame,
   Pause,
   Play,
-  RotateCcw,
   Square,
+  TimerOff,
   TimerReset,
 } from 'lucide-vue-next'
 
@@ -43,7 +46,9 @@ const demoTasks = [
   'Design System Audit',
   'Client Meeting Prep',
 ]
+const CURRENT_STREAK_DAYS = 4
 
+const router = useRouter()
 const timerSettingsStore = useTimerSettingsStore()
 const { breakDurationSeconds, focusDurationSeconds } = storeToRefs(timerSettingsStore)
 
@@ -105,16 +110,49 @@ const progressOffset = computed(() => {
   return circleCircumference * progressRatio.value
 })
 
+const completedSessionLengthLabel = computed(() => {
+  if (!sessionSummary.value) return '0 MIN'
+
+  return formatDurationSummary(sessionSummary.value.actualElapsedMs)
+})
+
+const stoppedSessionTitle = computed(() => {
+  return sessionSummary.value?.mode === 'break' ? 'Break Stopped' : 'Focus Stopped'
+})
+
+const isCompletedFocusSuccess = computed(() => {
+  return (
+    timerState.value === 'completed' &&
+    sessionSummary.value?.mode === 'focus' &&
+    sessionSummary.value.completionType === 'completed-normally'
+  )
+})
+
+const isCompletedStopped = computed(() => {
+  return (
+    timerState.value === 'completed' &&
+    sessionSummary.value?.mode === 'focus' &&
+    sessionSummary.value?.completionType === 'stopped-early'
+  )
+})
+
+const isCompletedBreakSuccess = computed(() => {
+  return (
+    timerState.value === 'completed' &&
+    sessionSummary.value?.mode === 'break'
+  )
+})
+
 const headerText = computed(() => {
   switch (timerState.value) {
     case 'running':
       return {
-        title: 'Stay Focused',
+        title: currentMode.value.id === 'break' ? 'Break Time' : 'Stay Focused',
         subtitle: '',
       }
     case 'paused':
       return {
-        title: 'Paused',
+        title: currentMode.value.id === 'break' ? 'Break Paused' : 'Paused',
         subtitle: 'Resume when you are ready',
       }
     case 'completed':
@@ -134,24 +172,12 @@ const headerText = computed(() => {
   }
 })
 
-const taskCardLabel = computed(() => {
-  if (timerState.value === 'completed') return 'Session Task'
-  if (timerState.value === 'idle') return 'Working On'
-  return 'Current Task'
-})
-
 const timerPrimaryText = computed(() => {
   if (timerState.value === 'completed' && sessionSummary.value) {
     return formatDuration(sessionSummary.value.actualElapsedMs)
   }
 
   return formatDuration(remainingMs.value)
-})
-
-const completionStatusLabel = computed(() => {
-  return sessionSummary.value?.completionType === 'completed-normally'
-    ? 'Completed normally'
-    : 'Stopped early'
 })
 
 function getModeConfig(id: FocusModeId) {
@@ -164,6 +190,17 @@ function formatDuration(durationMs: number) {
   const seconds = totalSeconds % 60
 
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+function formatDurationSummary(durationMs: number) {
+  const totalSeconds = Math.max(0, Math.ceil(durationMs / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+
+  if (seconds === 0) return `${minutes} MIN`
+  if (minutes === 0) return `${seconds} SEC`
+
+  return `${minutes}M ${String(seconds).padStart(2, '0')}S`
 }
 
 function clearTickInterval() {
@@ -287,6 +324,18 @@ function stopSession() {
   finalizeSession('stopped-early', elapsedNow)
 }
 
+function goHome() {
+  router.push('/home')
+}
+
+function goToTasks() {
+  router.push('/tasks')
+}
+
+function goToStats() {
+  router.push('/stats')
+}
+
 onBeforeUnmount(() => {
   clearTickInterval()
 })
@@ -306,7 +355,10 @@ watch(
 <template>
   <AppShell :chrome-hidden="hideAppChrome">
     <section class="flex flex-1 flex-col gap-6 pb-2 pt-3">
-      <header class="space-y-3 px-1 pt-1 text-center">
+      <header
+        v-if="timerState === 'idle' || timerState === 'running' || timerState === 'paused'"
+        class="space-y-3 px-1 pt-1 text-center"
+      >
         <h2 class="text-[2.05rem] font-semibold uppercase tracking-[0.2em] text-slate-900">
           {{ headerText.title }}
         </h2>
@@ -318,252 +370,341 @@ watch(
         </p>
       </header>
 
-      <Card
-        v-if="timerState === 'idle'"
-        class="overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(59,130,246,0.28)]"
-      >
-        <CardContent class="flex items-center gap-4 p-5">
-          <div class="min-w-0 flex-1">
-            <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
-              {{ taskCardLabel }}
-            </p>
-            <h3 class="mt-3 text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-800">
-              {{ currentTask }}
-            </h3>
-          </div>
-
-          <Button
-            type="button"
-            variant="ghost"
-            class="h-16 rounded-[1.15rem] bg-slate-100 px-5 text-base font-medium text-slate-600 hover:bg-slate-100/90"
-            @click="handleChangeTask"
-          >
-            Change
-            <ChevronRight class="size-4" />
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card
-        v-else
-        class="overflow-hidden rounded-[2rem] border-slate-100 bg-[#f5f8ff] shadow-[0_24px_60px_-34px_rgba(59,130,246,0.22)]"
-      >
-        <CardContent class="flex items-center gap-4 p-5">
-          <div class="h-16 w-4 rounded-full bg-blue-500/95" />
-
-          <div class="min-w-0 flex-1">
-            <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-blue-600">
-              {{ taskCardLabel }}
-            </p>
-            <h3 class="mt-3 text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-800">
-              {{ sessionSummary?.task ?? currentTask }}
-            </h3>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div class="flex justify-center pt-2">
-        <div
-          v-if="timerState === 'idle'"
-          class="relative flex aspect-square w-full max-w-[19rem] items-center justify-center rounded-full border-[6px] border-blue-500 bg-white shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.22)]"
-        >
-          <div class="flex flex-col items-center text-center">
-            <div class="text-[4.7rem] font-light leading-none tracking-[-0.08em] text-slate-900">
-              {{ timerPrimaryText }}
-            </div>
-            <p class="mt-4 text-[1.05rem] font-medium tracking-[-0.02em] text-slate-400">
-              Ready to start?
-            </p>
-          </div>
-        </div>
-
-        <div
-          v-else
-          class="relative flex aspect-square w-full max-w-[19.6rem] items-center justify-center"
-        >
-          <svg
-            class="absolute inset-0 h-full w-full -rotate-90"
-            viewBox="0 0 320 320"
-            aria-hidden="true"
-          >
-            <circle
-              cx="160"
-              cy="160"
-              :r="circleRadius"
-              fill="none"
-              stroke="rgb(226 232 240)"
-              stroke-width="12"
-            />
-            <circle
-              cx="160"
-              cy="160"
-              :r="circleRadius"
-              fill="none"
-              stroke="rgb(37 99 235)"
-              stroke-linecap="round"
-              stroke-width="12"
-              :stroke-dasharray="circleCircumference"
-              :stroke-dashoffset="progressOffset"
-            />
-          </svg>
-
-          <div
-            class="relative flex aspect-square w-[83%] flex-col items-center justify-center rounded-full bg-white text-center shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.18)]"
-          >
-            <div class="text-[4.55rem] font-light leading-none tracking-[-0.08em] text-slate-900">
-              {{ timerPrimaryText }}
-            </div>
-
-            <span
-              v-if="timerState === 'running' || timerState === 'paused'"
-              class="mt-5 rounded-full bg-blue-50 px-5 py-2 text-[0.95rem] font-semibold uppercase tracking-[0.14em] text-blue-700"
-            >
-              {{ timerState === 'paused' ? 'Paused' : currentMode.sessionBadge }}
-            </span>
-
-            <div
-              v-else-if="sessionSummary"
-              class="mt-5 flex items-center gap-2 rounded-full bg-slate-100 px-5 py-2 text-[0.92rem] font-semibold uppercase tracking-[0.14em] text-slate-600"
-            >
-              <CheckCircle2
-                v-if="sessionSummary.completionType === 'completed-normally'"
-                class="size-4 text-emerald-500"
-              />
-              <Square v-else class="size-3.5 text-orange-500" />
-              <span>{{ completionStatusLabel }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <p
-        v-if="timerState === 'running' || timerState === 'paused'"
-        class="mx-auto max-w-[18rem] text-center text-[1rem] leading-relaxed text-slate-400"
-      >
-        {{ timerState === 'paused' ? 'Take a breath, then continue when you are ready.' : currentMode.quote }}
-      </p>
-
-      <Button
-        v-if="timerState === 'idle'"
-        type="button"
-        class="mx-auto mt-1 flex h-16 w-full max-w-[18.5rem] items-center justify-center rounded-[1.3rem] bg-blue-500 text-[1.05rem] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_20px_36px_-22px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-        @click="startSession"
-      >
-        <Play class="size-5 fill-current" />
-        Start Session
-      </Button>
-
-      <div
-        v-else-if="timerState === 'running' || timerState === 'paused'"
-        class="grid grid-cols-2 gap-6 pt-3"
-      >
-        <div class="flex flex-col items-center gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            class="size-[5.8rem] rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
-            @click="stopSession"
-          >
-            <Square class="size-7" />
-          </Button>
-          <span class="text-[1rem] font-semibold uppercase tracking-[0.12em] text-slate-600">
-            Stop
-          </span>
-        </div>
-
-        <div class="flex flex-col items-center gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            class="size-[5.8rem] rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
-            @click="timerState === 'running' ? pauseSession() : resumeSession()"
-          >
-            <Pause v-if="timerState === 'running'" class="size-7" />
-            <Play v-else class="size-7 fill-current" />
-          </Button>
-          <span class="text-[1rem] font-semibold uppercase tracking-[0.12em] text-slate-600">
-            {{ timerState === 'running' ? 'Pause' : 'Resume' }}
-          </span>
-        </div>
-      </div>
-
-      <div v-else-if="sessionSummary" class="space-y-4">
+      <template v-if="timerState === 'idle'">
         <Card
-          class="rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(59,130,246,0.2)]"
+          v-if="currentMode.id === 'focus'"
+          class="overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(59,130,246,0.28)]"
         >
-          <CardContent class="space-y-4 p-5">
-            <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
-              <span class="text-sm font-medium text-slate-500">Planned duration</span>
-              <span class="text-base font-semibold text-slate-800">
-                {{ formatDuration(sessionSummary.plannedDurationMs) }}
-              </span>
+          <CardContent class="flex items-center gap-4 p-5">
+            <div class="min-w-0 flex-1">
+              <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Working On
+              </p>
+              <h3 class="mt-3 text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-800">
+                {{ currentTask }}
+              </h3>
             </div>
 
-            <div class="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
-              <span class="text-sm font-medium text-slate-500">Actual focused time</span>
-              <span class="text-base font-semibold text-slate-800">
-                {{ formatDuration(sessionSummary.actualElapsedMs) }}
-              </span>
-            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              class="h-16 rounded-[1.15rem] bg-slate-100 px-5 text-base font-medium text-slate-600 hover:bg-slate-100/90"
+              @click="handleChangeTask"
+            >
+              Change
+              <ChevronRight class="size-4" />
+            </Button>
+          </CardContent>
+        </Card>
 
-            <div class="flex items-center justify-between gap-4">
-              <span class="text-sm font-medium text-slate-500">Result</span>
-              <span
-                class="rounded-full px-3 py-1 text-sm font-semibold"
-                :class="
-                  sessionSummary.completionType === 'completed-normally'
-                    ? 'bg-emerald-50 text-emerald-600'
-                    : 'bg-orange-50 text-orange-600'
-                "
-              >
-                {{ completionStatusLabel }}
-              </span>
+        <div class="flex justify-center pt-2">
+          <div
+            class="relative flex aspect-square w-full max-w-[19rem] items-center justify-center rounded-full border-[6px] border-blue-500 bg-white shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.22)]"
+          >
+            <div class="flex flex-col items-center text-center">
+              <div class="text-[4.7rem] font-light leading-none tracking-[-0.08em] text-slate-900">
+                {{ timerPrimaryText }}
+              </div>
+              <p class="mt-4 text-[1.05rem] font-medium tracking-[-0.02em] text-slate-400">
+                Ready to start?
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          class="mx-auto mt-1 flex h-16 w-full max-w-[18.5rem] items-center justify-center rounded-[1.3rem] bg-blue-500 text-[1.05rem] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_20px_36px_-22px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
+          @click="startSession"
+        >
+          <Play class="size-5 fill-current" />
+          Start Session
+        </Button>
+
+        <div class="grid grid-cols-2 gap-4 pt-3">
+          <Button
+            v-for="mode in modes"
+            :key="mode.id"
+            type="button"
+            variant="ghost"
+            class="flex h-auto min-h-[8.25rem] flex-col items-center justify-center gap-3 rounded-[1.55rem] border px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+            :class="
+              mode.id === selectedMode
+                ? 'border-blue-200 bg-blue-50 text-blue-500'
+                : 'border-slate-100 bg-slate-50 text-slate-500'
+            "
+            @click="handleModeSelect(mode.id)"
+          >
+            <component :is="mode.icon" class="size-7 stroke-[1.8]" />
+            <span class="text-lg font-semibold uppercase tracking-[0.05em]">
+              {{ mode.label }}
+            </span>
+          </Button>
+        </div>
+      </template>
+
+      <template v-else-if="timerState === 'running' || timerState === 'paused'">
+        <Card
+          v-if="currentMode.id === 'focus'"
+          class="overflow-hidden rounded-[2rem] border-slate-100 bg-[#f5f8ff] shadow-[0_24px_60px_-34px_rgba(59,130,246,0.22)]"
+        >
+          <CardContent class="flex items-center gap-4 p-5">
+            <div class="h-16 w-4 rounded-full bg-blue-500/95" />
+
+            <div class="min-w-0 flex-1">
+              <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-blue-600">
+                Current Task
+              </p>
+              <h3 class="mt-3 text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-800">
+                {{ currentTask }}
+              </h3>
             </div>
           </CardContent>
         </Card>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="flex justify-center pt-2">
+          <div class="relative flex aspect-square w-full max-w-[19.6rem] items-center justify-center">
+            <svg
+              class="absolute inset-0 h-full w-full -rotate-90"
+              viewBox="0 0 320 320"
+              aria-hidden="true"
+            >
+              <circle
+                cx="160"
+                cy="160"
+                :r="circleRadius"
+                fill="none"
+                stroke="rgb(226 232 240)"
+                stroke-width="12"
+              />
+              <circle
+                cx="160"
+                cy="160"
+                :r="circleRadius"
+                fill="none"
+                stroke="rgb(37 99 235)"
+                stroke-linecap="round"
+                stroke-width="12"
+                :stroke-dasharray="circleCircumference"
+                :stroke-dashoffset="progressOffset"
+              />
+            </svg>
+
+            <div
+              class="relative flex aspect-square w-[83%] flex-col items-center justify-center rounded-full bg-white text-center shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.18)]"
+            >
+              <div class="text-[4.55rem] font-light leading-none tracking-[-0.08em] text-slate-900">
+                {{ timerPrimaryText }}
+              </div>
+
+              <span
+                class="mt-5 rounded-full bg-blue-50 px-5 py-2 text-[0.95rem] font-semibold uppercase tracking-[0.14em] text-blue-700"
+              >
+                {{ timerState === 'paused' ? 'Paused' : currentMode.sessionBadge }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <p class="mx-auto max-w-[18rem] text-center text-[1rem] leading-relaxed text-slate-400">
+          {{ timerState === 'paused' ? 'Take a breath, then continue when you are ready.' : currentMode.quote }}
+        </p>
+
+        <div class="grid grid-cols-2 gap-6 pt-3">
+          <div class="flex flex-col items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              class="size-[5.8rem] rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
+              @click="stopSession"
+            >
+              <Square class="size-7" />
+            </Button>
+            <span class="text-[1rem] font-semibold uppercase tracking-[0.12em] text-slate-600">
+              Stop
+            </span>
+          </div>
+
+          <div class="flex flex-col items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              class="size-[5.8rem] rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
+              @click="timerState === 'running' ? pauseSession() : resumeSession()"
+            >
+              <Pause v-if="timerState === 'running'" class="size-7" />
+              <Play v-else class="size-7 fill-current" />
+            </Button>
+            <span class="text-[1rem] font-semibold uppercase tracking-[0.12em] text-slate-600">
+              {{ timerState === 'running' ? 'Pause' : 'Resume' }}
+            </span>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="isCompletedFocusSuccess && sessionSummary">
+        <header class="pt-1 text-center">
+          <h2 class="text-[1.05rem] font-semibold uppercase tracking-[0.2em] text-[#6e84ab]">
+            Focus
+          </h2>
+        </header>
+
+        <Card class="rounded-[2rem] border-white/90 bg-white shadow-[0_26px_60px_-38px_rgba(15,23,42,0.14)]">
+          <CardContent class="flex flex-col items-center px-6 py-8 text-center">
+            <div class="flex size-[4.5rem] items-center justify-center rounded-full bg-emerald-100">
+              <div class="flex size-8 items-center justify-center rounded-full bg-emerald-500">
+                <Check class="size-5 text-white" />
+              </div>
+            </div>
+
+            <h3 class="mt-8 text-[2rem] font-semibold uppercase tracking-[-0.05em] text-slate-900">
+              Session Complete
+            </h3>
+            <p class="mt-4 text-[3.1rem] font-semibold leading-none tracking-[-0.06em] text-blue-600">
+              {{ completedSessionLengthLabel }}
+            </p>
+            <p class="mt-2 text-[1.05rem] font-semibold uppercase tracking-[0.14em] text-blue-600">
+              Focused
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card class="rounded-[1.7rem] border-white/90 bg-white shadow-[0_18px_40px_-32px_rgba(15,23,42,0.12)]">
+          <CardContent class="flex items-center gap-4 p-5">
+            <span class="flex size-12 items-center justify-center rounded-[1rem] bg-[#edf4ff] text-blue-600">
+              <ClipboardList class="size-6" />
+            </span>
+
+            <div class="min-w-0 flex-1">
+              <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Task
+              </p>
+              <h3 class="mt-2 text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-800">
+                {{ sessionSummary.task }}
+              </h3>
+            </div>
+          </CardContent>
+        </Card>
+
+        <button type="button" class="w-full text-left" @click="goToStats">
+          <Card class="rounded-[1.8rem] border-orange-200/70 bg-[#fff5ec] shadow-[0_18px_40px_-32px_rgba(251,146,60,0.22)]">
+            <CardContent class="flex items-center gap-4 p-5">
+              <span class="flex size-11 items-center justify-center rounded-full bg-white/80 text-orange-500">
+                <Flame class="size-6" />
+              </span>
+
+              <div class="min-w-0 flex-1">
+                <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-orange-400">
+                  Current Streak
+                </p>
+                <p class="mt-1 text-[2rem] font-semibold leading-none tracking-[-0.04em] text-orange-600">
+                  {{ CURRENT_STREAK_DAYS }} days
+                </p>
+              </div>
+
+              <ChevronRight class="size-5 text-orange-400" />
+            </CardContent>
+          </Card>
+        </button>
+
+        <div class="grid grid-cols-2 gap-4 pt-2">
           <Button
             type="button"
-            class="h-14 rounded-[1.2rem] bg-blue-500 text-sm font-semibold uppercase tracking-[0.08em] text-white shadow-[0_18px_30px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-            @click="startSession"
+            variant="outline"
+            class="h-16 rounded-[1.2rem] border-slate-200/90 bg-white text-[1.05rem] font-semibold uppercase tracking-[0.06em] text-slate-800 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.2)] hover:bg-white"
+            @click="goHome"
           >
-            <Play class="size-4 fill-current" />
-            Start Another
+            Home
+          </Button>
+
+          <Button
+            type="button"
+            class="h-16 rounded-[1.2rem] bg-blue-600 text-[1.05rem] font-semibold uppercase tracking-[0.06em] text-white shadow-[0_18px_34px_-18px_rgba(37,99,235,0.75)] hover:bg-blue-600/90"
+            @click="goToStats"
+          >
+            View Stats
+          </Button>
+        </div>
+      </template>
+
+      <template v-else-if="isCompletedStopped">
+        <Card class="rounded-[2rem] border-white/90 bg-white shadow-[0_26px_60px_-38px_rgba(15,23,42,0.14)]">
+          <CardContent class="flex flex-col items-center px-6 py-8 text-center">
+            <div class="flex size-[8.8rem] items-center justify-center rounded-full bg-[#f5f7ff] shadow-[inset_0_0_0_12px_rgba(239,243,255,0.95)]">
+              <div class="flex size-[6.2rem] items-center justify-center rounded-full bg-white shadow-[0_0_0_12px_rgba(241,245,249,0.9)]">
+                <TimerOff class="size-10 text-blue-600 stroke-[1.8]" />
+              </div>
+            </div>
+
+            <h3 class="mt-8 text-[2.15rem] font-semibold uppercase tracking-[-0.05em] text-slate-900">
+              {{ stoppedSessionTitle }}
+            </h3>
+            <p class="mt-5 max-w-[15.5rem] text-[1rem] leading-relaxed text-slate-500">
+              This session wasn't completed, so it won't be added to your statistics.
+            </p>
+          </CardContent>
+        </Card>
+
+        <div class="space-y-4 pt-4">
+          <Button
+            type="button"
+            class="h-16 w-full rounded-[1.3rem] bg-blue-600 text-[1.05rem] font-semibold text-white shadow-[0_20px_36px_-22px_rgba(37,99,235,0.8)] hover:bg-blue-600/90"
+            @click="goToTasks"
+          >
+            Return to Tasks
           </Button>
 
           <Button
             type="button"
             variant="outline"
-            class="h-14 rounded-[1.2rem] text-sm font-semibold uppercase tracking-[0.08em]"
-            @click="resetToIdle"
+            class="h-16 w-full rounded-[1.3rem] border-slate-200/90 bg-white text-[1.05rem] font-semibold text-blue-600 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.12)] hover:bg-white"
+            @click="startSession"
           >
-            <RotateCcw class="size-4" />
-            Reset
+            Start New Session
           </Button>
         </div>
-      </div>
+      </template>
 
-      <div v-if="timerState === 'idle'" class="grid grid-cols-2 gap-4 pt-3">
-        <Button
-          v-for="mode in modes"
-          :key="mode.id"
-          type="button"
-          variant="ghost"
-          class="flex h-auto min-h-[8.25rem] flex-col items-center justify-center gap-3 rounded-[1.55rem] border px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
-          :class="
-            mode.id === selectedMode
-              ? 'border-blue-200 bg-blue-50 text-blue-500'
-              : 'border-slate-100 bg-slate-50 text-slate-500'
-          "
-          @click="handleModeSelect(mode.id)"
-        >
-          <component :is="mode.icon" class="size-7 stroke-[1.8]" />
-          <span class="text-lg font-semibold uppercase tracking-[0.05em]">
-            {{ mode.label }}
-          </span>
-        </Button>
-      </div>
+      <template v-else-if="isCompletedBreakSuccess">
+        <header class="pt-1 text-center">
+          <h2 class="text-[1.75rem] font-semibold tracking-[-0.03em] text-blue-700">
+            Focus
+          </h2>
+        </header>
+
+        <Card class="rounded-[2rem] border-white/90 bg-white shadow-[0_26px_60px_-38px_rgba(15,23,42,0.14)]">
+          <CardContent class="flex flex-col items-center px-6 py-8 text-center">
+            <div class="flex size-[7.6rem] items-center justify-center rounded-full bg-white shadow-[0_0_0_16px_rgba(241,245,249,0.92)]">
+              <Coffee class="size-12 text-blue-700 stroke-[1.8]" />
+            </div>
+
+            <p class="mt-8 text-[3.05rem] font-semibold leading-none tracking-[-0.06em] text-slate-900">
+              {{ completedSessionLengthLabel }}
+            </p>
+            <p class="mt-5 text-[1.25rem] font-semibold uppercase tracking-[0.26em] text-blue-700">
+              Break Finished
+            </p>
+          </CardContent>
+        </Card>
+
+        <div class="space-y-5 pt-3">
+          <Button
+            type="button"
+            class="h-16 w-full rounded-[1.3rem] bg-blue-600 text-[1.05rem] font-semibold text-white shadow-[0_20px_36px_-22px_rgba(37,99,235,0.8)] hover:bg-blue-600/90"
+            @click="startSession"
+          >
+            Start Another
+          </Button>
+
+          <button
+            type="button"
+            class="w-full text-center text-[1.05rem] font-semibold text-blue-700"
+            @click="resetToIdle"
+          >
+            Reset
+          </button>
+        </div>
+      </template>
     </section>
   </AppShell>
 </template>

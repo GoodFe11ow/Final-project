@@ -160,6 +160,7 @@ export const useTasksStore = defineStore('tasks', {
     tasks: [] as TaskItem[],
     isLoading: false,
     errorMessage: '',
+    loadedForUserId: null as string | null,
   }),
   actions: {
      async createTask(draft: TaskDraft) {
@@ -391,8 +392,9 @@ export const useTasksStore = defineStore('tasks', {
     async fetchTasks() {
       const authStore = useAuthStore()
 
-      if(!authStore.token) {
+      if(!authStore.token || !authStore.user) {
         this.tasks = []
+        this.loadedForUserId = null
         return
       }
 
@@ -407,11 +409,28 @@ export const useTasksStore = defineStore('tasks', {
         const tasks = Array.isArray(response.data) ? response.data : []
 
         this.tasks = tasks.map(mapBackendTask)
+        this.loadedForUserId = authStore.user.id
       } catch (error) {
+        this.loadedForUserId = null
         this.errorMessage = error instanceof Error ? error.message : 'Failed to load tasks'  
       } finally {
         this.isLoading = false
       }
+    },
+    async ensureTasksLoaded() {
+      const authStore = useAuthStore()
+
+      if (!authStore.token || !authStore.user) {
+        this.tasks = []
+        this.loadedForUserId = null
+        return
+      }
+
+      if (this.loadedForUserId === authStore.user.id || this.isLoading) {
+        return
+      }
+
+      await this.fetchTasks()
     }
   },
 })

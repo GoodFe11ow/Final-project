@@ -10,6 +10,7 @@ import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import { pinia } from '@/stores'
 import { useAuthStore } from '@/stores/auth'
+import { useTasksStore } from '@/stores/tasks'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -46,6 +47,11 @@ router.beforeEach((to) => {
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
     return '/home'
+  }
+
+  if (to.meta.requiresAuth) {
+    const tasksStore = useTasksStore(pinia)
+    void tasksStore.ensureTasksLoaded()
   }
 })
 

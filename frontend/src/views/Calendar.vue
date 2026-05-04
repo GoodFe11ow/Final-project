@@ -5,6 +5,8 @@ import {
   CalendarDays,
   Check,
   CircleDot,
+  Info,
+  LoaderPinwheel,
 } from 'lucide-vue-next'
 import AppShell from '@/components/layout/AppShell.vue'
 import { Card, CardContent } from '@/components/ui/card'
@@ -28,13 +30,13 @@ type CalendarCell = {
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const tasksStore = useTasksStore()
-const { tasks } = storeToRefs(tasksStore)
+const { tasks, isLoading, errorMessage } = storeToRefs(tasksStore)
 
 const todayKey = formatDateKey(new Date())
 const tomorrowKey = addDaysToDateKey(todayKey, 1)
 
 const calendarMode = ref<CalendarMode>('month')
-const selectedDateKey = ref(getInitialSelectedDate())
+const selectedDateKey = ref(todayKey)
 
 const tasksByDate = computed(() => {
   const groupedTasks = new Map<string, TaskItem[]>()
@@ -86,16 +88,18 @@ const selectedDateLabel = computed(() => {
   }).format(parseDateKey(selectedDateKey.value))
 })
 
+const calendarErrorMessage = computed(() => {
+  if (!errorMessage.value) return ''
+
+  if (errorMessage.value === 'Unauthorized') {
+    return 'Please sign in to view your calendar.'
+  }
+
+  return 'We couldn’t load your scheduled tasks right now. Please try again.'
+})
+
 function selectDate(dateKey: string) {
   selectedDateKey.value = dateKey
-}
-
-function getInitialSelectedDate() {
-  const taskDateKeys = tasks.value
-    .map((task) => resolveTaskDateKey(task.assignedDate))
-    .sort()
-
-  return taskDateKeys[0] ?? todayKey
 }
 
 function resolveTaskDateKey(dateValue: string) {
@@ -213,165 +217,207 @@ function taskTrailingLabel(task: TaskItem) {
 
   return `${getTaskProgress(task).percent}%`
 }
+
+function getDateIndicatorClass(dateKey: string) {
+  const dateTasks = tasksByDate.value.get(dateKey) ?? []
+
+  if (dateTasks.length === 0) {
+    return 'opacity-0'
+  }
+
+  if (dateKey < todayKey) {
+    return dateTasks.some((task) => !task.completed) ? 'bg-amber-400' : 'bg-blue-300'
+  }
+
+  return 'bg-blue-500'
+}
 </script>
 
 <template>
   <AppShell>
     <section class="flex flex-1 flex-col gap-6 pb-2 pt-3">
       <header class="pt-1 text-center">
-        <h2 class="text-[2.1rem] font-semibold uppercase tracking-[0.08em] text-slate-900">
-          Calendar
-        </h2>
+        <div class="flex items-center justify-center gap-2">
+          <h2 class="text-[2.1rem] font-semibold uppercase tracking-[0.08em] text-slate-900">
+            Calendar
+          </h2>
+          <button
+            type="button"
+            class="inline-flex size-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-500"
+            title="More calendar tools are planned for a future update."
+            aria-label="More calendar tools are planned for a future update."
+          >
+            <Info class="size-4" />
+          </button>
+        </div>
       </header>
 
-      <div
-        class="relative mx-auto flex w-full max-w-[14rem] items-center rounded-full bg-[#eef2ff] p-1 shadow-[0_18px_32px_-28px_rgba(15,23,42,0.28)]"
-      >
-        <span
-          class="absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-white shadow-sm transition-transform duration-300 ease-out"
-          :class="calendarMode === 'week' ? 'translate-x-full' : 'translate-x-0'"
-        />
-        <button
-          type="button"
-          class="relative z-10 flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-300"
-          :class="
-            calendarMode === 'month'
-              ? 'text-blue-500'
-              : 'text-slate-500 hover:text-slate-700'
-          "
-          @click="calendarMode = 'month'"
-        >
-          Month
-        </button>
-        <button
-          type="button"
-          class="relative z-10 flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-300"
-          :class="
-            calendarMode === 'week'
-              ? 'text-blue-500'
-              : 'text-slate-500 hover:text-slate-700'
-          "
-          @click="calendarMode = 'week'"
-        >
-          Week
-        </button>
+      <div v-if="isLoading" class="flex flex-1 items-center justify-center">
+        <div class="flex items-center gap-3 text-slate-500">
+          <LoaderPinwheel class="size-5 animate-spin text-blue-500" />
+          <p>Loading tasks...</p>
+        </div>
       </div>
 
-      <h3 class="text-center text-[2rem] font-semibold tracking-[-0.05em] text-slate-900">
-        {{ monthLabel }}
-      </h3>
+      <div v-else-if="calendarErrorMessage" class="flex flex-1 items-center justify-center px-6 text-center">
+        <p class="text-red-500">{{ calendarErrorMessage }}</p>
+      </div>
 
-      <Card class="rounded-[1.9rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(15,23,42,0.18)]">
-        <CardContent class="p-5">
-          <div class="grid grid-cols-7 gap-2 text-center">
-            <span
-              v-for="day in DAY_LABELS"
-              :key="day"
-              class="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-blue-500"
-            >
-              {{ day }}
-            </span>
-          </div>
-
-          <div class="mt-5 overflow-hidden">
-            <Transition name="calendar-panel" mode="out-in">
-              <div
-                :key="calendarMode"
-                class="grid grid-cols-7 gap-y-3"
-                :class="calendarMode === 'month' ? 'min-h-[17.25rem]' : 'min-h-[4.75rem]'"
-              >
-                <button
-                  v-for="cell in calendarCells"
-                  :key="cell.dateKey"
-                  type="button"
-                  class="mx-auto flex h-12 w-10 flex-col items-center justify-center rounded-[1rem] transition-all duration-200"
-                  :class="
-                    cell.isSelected
-                      ? 'bg-blue-500 text-white shadow-[0_18px_30px_-18px_rgba(59,130,246,0.95)]'
-                      : cell.isCurrentMonth
-                        ? 'text-slate-700 hover:bg-blue-50'
-                        : 'text-slate-300 hover:bg-slate-100'
-                  "
-                  @click="selectDate(cell.dateKey)"
-                >
-                  <span
-                    class="text-[0.98rem] font-semibold"
-                    :class="!cell.isSelected && cell.isToday ? 'text-blue-500' : ''"
-                  >
-                    {{ cell.dayNumber }}
-                  </span>
-                  <span
-                    v-if="cell.hasTasks"
-                    class="mt-1 size-1.5 rounded-full"
-                    :class="cell.isSelected ? 'bg-white' : 'bg-blue-500'"
-                  />
-                </button>
-              </div>
-            </Transition>
-          </div>
-        </CardContent>
-      </Card>
-
-      <section class="space-y-4">
-        <div class="px-1">
-          <h3 class="text-[2rem] font-semibold tracking-[-0.05em] text-slate-900">
-            {{ selectedDateTitle }}
-          </h3>
-          <p class="mt-1 text-sm font-medium text-slate-400">
-            {{ selectedDateLabel }}
-          </p>
-        </div>
-
-        <div v-if="selectedDateTasks.length === 0">
-          <Card class="rounded-[1.75rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(15,23,42,0.16)]">
-            <CardContent class="flex flex-col items-center px-6 py-10 text-center">
-              <span class="flex size-14 items-center justify-center rounded-full bg-blue-50 text-blue-400">
-                <CalendarDays class="size-6" />
-              </span>
-              <p class="mt-4 text-lg font-semibold tracking-[-0.03em] text-slate-800">
-                No tasks scheduled
-              </p>
-              <p class="mt-2 max-w-[15rem] text-sm leading-6 text-slate-400">
-                Select another day or create a task in the Tasks section.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div v-else class="space-y-3">
-          <Card
-            v-for="task in selectedDateTasks"
-            :key="task.id"
-            class="rounded-[1.65rem] border-white/80 bg-[#f4f6ff] shadow-[0_22px_48px_-36px_rgba(15,23,42,0.2)]"
+      <template v-else>
+        <div
+          class="relative mx-auto flex w-full max-w-[14rem] items-center rounded-full bg-[#eef2ff] p-1 shadow-[0_18px_32px_-28px_rgba(15,23,42,0.28)]"
+        >
+          <span
+            class="absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-white shadow-sm transition-transform duration-300 ease-out"
+            :class="calendarMode === 'week' ? 'translate-x-full' : 'translate-x-0'"
+          />
+          <button
+            type="button"
+            class="relative z-10 flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-300"
+            :class="
+              calendarMode === 'month'
+                ? 'text-blue-500'
+                : 'text-slate-500 hover:text-slate-700'
+            "
+            @click="calendarMode = 'month'"
           >
-            <CardContent class="flex items-center gap-4 p-4">
-              <span
-                class="flex size-11 shrink-0 items-center justify-center rounded-full bg-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.3)]"
-                :class="task.completed ? 'text-blue-500' : 'text-slate-500'"
-              >
-                <Check v-if="task.completed" class="size-5 stroke-[2.8]" />
-                <CircleDot v-else class="size-5" />
-              </span>
-
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-[1.02rem] font-semibold tracking-[-0.03em] text-slate-800">
-                  {{ task.title }}
-                </p>
-                <p class="mt-1 text-sm text-slate-400">
-                  {{ taskStatusLabel(task) }}
-                </p>
-              </div>
-
-              <span
-                class="shrink-0 text-sm font-semibold"
-                :class="task.completed ? 'text-blue-500' : 'text-slate-400'"
-              >
-                {{ taskTrailingLabel(task) }}
-              </span>
-            </CardContent>
-          </Card>
+            Month
+          </button>
+          <button
+            type="button"
+            class="relative z-10 flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-300"
+            :class="
+              calendarMode === 'week'
+                ? 'text-blue-500'
+                : 'text-slate-500 hover:text-slate-700'
+            "
+            @click="calendarMode = 'week'"
+          >
+            Week
+          </button>
         </div>
-      </section>
+
+        <h3 class="text-center text-[2rem] font-semibold tracking-[-0.05em] text-slate-900">
+          {{ monthLabel }}
+        </h3>
+
+        <Card class="rounded-[1.9rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(15,23,42,0.18)]">
+          <CardContent class="p-5">
+            <div class="grid grid-cols-7 gap-2 text-center">
+              <span
+                v-for="day in DAY_LABELS"
+                :key="day"
+                class="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-blue-500"
+              >
+                {{ day }}
+              </span>
+            </div>
+
+            <div class="mt-5 overflow-hidden">
+              <Transition name="calendar-panel" mode="out-in">
+                <div
+                  :key="calendarMode"
+                  class="grid grid-cols-7 gap-y-3"
+                  :class="calendarMode === 'month' ? 'min-h-[17.25rem]' : 'min-h-[4.75rem]'"
+                >
+                  <button
+                    v-for="cell in calendarCells"
+                    :key="cell.dateKey"
+                    type="button"
+                    class="mx-auto flex h-12 w-10 flex-col items-center justify-center rounded-[1rem] transition-all duration-200"
+                    :class="
+                      cell.isSelected
+                        ? 'bg-blue-500 text-white shadow-[0_18px_30px_-18px_rgba(59,130,246,0.95)]'
+                        : cell.isCurrentMonth
+                          ? 'text-slate-700 hover:bg-blue-50'
+                          : 'text-slate-300 hover:bg-slate-100'
+                    "
+                    @click="selectDate(cell.dateKey)"
+                    >
+                      <span
+                      class="text-[0.98rem] font-semibold leading-none"
+                      :class="!cell.isSelected && cell.isToday ? 'text-blue-500' : ''"
+                    >
+                      {{ cell.dayNumber }}
+                    </span>
+                    <span
+                      class="mt-1 block h-1.5 w-1.5 rounded-full"
+                      :class="
+                        cell.hasTasks
+                          ? cell.isSelected
+                            ? 'bg-white'
+                            : getDateIndicatorClass(cell.dateKey)
+                          : 'opacity-0'
+                      "
+                    />
+                  </button>
+                </div>
+              </Transition>
+            </div>
+          </CardContent>
+        </Card>
+
+        <section class="space-y-4">
+          <div class="px-1">
+            <h3 class="text-[2rem] font-semibold tracking-[-0.05em] text-slate-900">
+              {{ selectedDateTitle }}
+            </h3>
+            <p class="mt-1 text-sm font-medium text-slate-400">
+              {{ selectedDateLabel }}
+            </p>
+          </div>
+
+          <div v-if="selectedDateTasks.length === 0">
+            <Card class="rounded-[1.75rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(15,23,42,0.16)]">
+              <CardContent class="flex flex-col items-center px-6 py-10 text-center">
+                <span class="flex size-14 items-center justify-center rounded-full bg-blue-50 text-blue-400">
+                  <CalendarDays class="size-6" />
+                </span>
+                <p class="mt-4 text-lg font-semibold tracking-[-0.03em] text-slate-800">
+                  No tasks scheduled
+                </p>
+                <p class="mt-2 max-w-[15rem] text-sm leading-6 text-slate-400">
+                  Select another day or create a task in the Tasks section.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div v-else class="space-y-3">
+            <Card
+              v-for="task in selectedDateTasks"
+              :key="task.id"
+              class="rounded-[1.65rem] border-white/80 bg-[#f4f6ff] shadow-[0_22px_48px_-36px_rgba(15,23,42,0.2)]"
+            >
+              <CardContent class="flex items-center gap-4 p-4">
+                <span
+                  class="flex size-11 shrink-0 items-center justify-center rounded-full bg-white shadow-[0_12px_24px_-20px_rgba(15,23,42,0.3)]"
+                  :class="task.completed ? 'text-blue-500' : 'text-slate-500'"
+                >
+                  <Check v-if="task.completed" class="size-5 stroke-[2.8]" />
+                  <CircleDot v-else class="size-5" />
+                </span>
+
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-[1.02rem] font-semibold tracking-[-0.03em] text-slate-800">
+                    {{ task.title }}
+                  </p>
+                  <p class="mt-1 text-sm text-slate-400">
+                    {{ taskStatusLabel(task) }}
+                  </p>
+                </div>
+
+                <span
+                  class="shrink-0 text-sm font-semibold"
+                  :class="task.completed ? 'text-blue-500' : 'text-slate-400'"
+                >
+                  {{ taskTrailingLabel(task) }}
+                </span>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      </template>
     </section>
   </AppShell>
 </template>

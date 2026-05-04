@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppShell from '@/components/layout/AppShell.vue'
 import { Button } from '@/components/ui/button'
@@ -39,10 +39,6 @@ type TaskFormState = {
 
 const tasksStore = useTasksStore()
 const { tasks, isLoading, errorMessage } = storeToRefs(tasksStore)
-
-onMounted(() => {
-  void tasksStore.fetchTasks()
-})
 
 const selectedTaskId = ref<string | null>(null)
 const dialogMode = ref<DialogMode | null>(null)

@@ -139,7 +139,7 @@ function buildTaskPayload(draft: TaskDraft) {
 }
 
 function mapBackendTask(task: BackendTask): TaskItem {
-  const subtasks = task.subtasks.map((subtask) => ({
+  const subtasks = (Array.isArray(task.subtasks) ? task.subtasks : []).map((subtask) => ({
     id: subtask.id,
     title: subtask.title,
     completed: subtask.isCompleted,
@@ -247,7 +247,11 @@ export const useTasksStore = defineStore('tasks', {
         }
 
         for (const draftSubtask of normalizedDraftSubtasks) {
-          if (!draftSubtask.id) {
+          const existingSubtask = draftSubtask.id
+            ? existingSubtasksById.get(draftSubtask.id)
+            : undefined
+
+          if (!existingSubtask) {
             await apiRequest<CreateSubtaskResponse>(`/tasks/${taskId}/subtasks`, {
               method: 'POST',
               token: authStore.token,
@@ -257,9 +261,7 @@ export const useTasksStore = defineStore('tasks', {
             continue
           }
 
-          const existingSubtask = existingSubtasksById.get(draftSubtask.id)
-
-          if (!existingSubtask || existingSubtask.title === draftSubtask.title) {
+          if (existingSubtask.title === draftSubtask.title) {
             continue
           }
 
@@ -401,8 +403,10 @@ export const useTasksStore = defineStore('tasks', {
         const response = await apiRequest<GetTasksResponse>('/tasks', {
           token: authStore.token,
         })
-        
-        this.tasks = response.data.map(mapBackendTask)
+
+        const tasks = Array.isArray(response.data) ? response.data : []
+
+        this.tasks = tasks.map(mapBackendTask)
       } catch (error) {
         this.errorMessage = error instanceof Error ? error.message : 'Failed to load tasks'  
       } finally {

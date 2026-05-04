@@ -424,8 +424,8 @@ function progressMessage(task: TaskItem) {
       </template>
 
       <Dialog v-model:open="isDialogOpen">
-        <DialogContent class="max-w-[23rem] overflow-hidden rounded-[1.9rem] border-white/80 p-0">
-          <form class="bg-white" @submit.prevent="saveTask">
+        <DialogContent class="flex max-h-[85vh] max-w-[23rem] flex-col gap-0 overflow-hidden rounded-[1.9rem] border-white/80 p-0">
+          <form class="flex min-h-0 flex-1 flex-col bg-white" @submit.prevent="saveTask">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <Button type="button" variant="ghost" size="icon-sm"
                 class="rounded-full text-slate-500 hover:bg-slate-100" @click="closeDialog">
@@ -439,7 +439,7 @@ function progressMessage(task: TaskItem) {
               <div class="size-8" aria-hidden="true" />
             </div>
 
-            <div class="space-y-5 px-5 py-5">
+            <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
               <div class="space-y-2">
                 <label class="text-sm font-medium text-slate-500" for="task-title">
                   Task name
@@ -500,8 +500,11 @@ function progressMessage(task: TaskItem) {
                   class="h-11 w-[10rem] rounded-xl border-white bg-white px-3 text-sm font-medium text-slate-700 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.28)] focus-visible:ring-1" />
               </div>
 
+            </div>
+
+            <div class="border-t border-slate-100 bg-white px-5 py-4">
               <Button type="submit"
-                class="mt-2 h-14 w-full rounded-[1.2rem] bg-blue-500 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
+                class="h-14 w-full rounded-[1.2rem] bg-blue-500 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
                 :disabled="!canSubmitForm || isSavingTask">
                 <RefreshCw v-if="isSavingTask" class="size-4 animate-spin" />
                 <span>{{ saveButtonLabel }}</span>

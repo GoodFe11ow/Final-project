@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
   <main class="flex min-h-svh w-full items-center justify-center bg-[#f5f5f7] px-6 py-10 text-foreground">
     <section class="w-full max-w-sm rounded-3xl bg-background px-6 py-12 shadow-sm">
       <div class="mx-auto max-w-xs space-y-10 text-center">
-        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-500 text-primary">
+        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-2 border-blue-500 text-primary">
           <img src="/IconObject.svg" alt="Productivity App logo" class="h-8 w-8 object-contain" />
         </div>
 

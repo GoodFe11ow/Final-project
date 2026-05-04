@@ -49,6 +49,8 @@ const dialogMode = ref<DialogMode | null>(null)
 const taskForm = reactive<TaskFormState>(createEmptyTaskForm())
 const isSavingTask = ref(false)
 const isDeletingTask = ref(false)
+const pendingSubtaskIds = ref<string[]>([])
+const isCompletingTask = ref(false)
 
 const saveButtonLabel = computed(() => {
   if (isSavingTask.value) {
@@ -167,6 +169,10 @@ function goBackToList() {
   selectedTaskId.value = null
 }
 
+function isSubtaskPending(subtaskId: string) {
+  return pendingSubtaskIds.value.includes(subtaskId)
+}
+
 async function saveTask() {
   if (!canSubmitForm.value || isSavingTask.value) return
 
@@ -194,16 +200,30 @@ async function saveTask() {
   }
 }
 
-function toggleSelectedSubtask(subtaskId: string) {
-  if (!selectedTask.value) return
+async function toggleSelectedSubtask(subtaskId: string) {
+  if (!selectedTask.value || isSubtaskPending(subtaskId) || isCompletingTask.value) return
 
-  tasksStore.toggleSubtask(selectedTask.value.id, subtaskId)
-}//TODO: delete later
+  pendingSubtaskIds.value = [...pendingSubtaskIds.value, subtaskId]
 
-function markSelectedTaskComplete() {
-  if (!selectedTask.value) return
+  try {
+    await tasksStore.toggleSubtask(selectedTask.value.id, subtaskId)
+  } catch {
+  } finally {
+    pendingSubtaskIds.value = pendingSubtaskIds.value.filter((id) => id !== subtaskId)
+  }
+}
 
-  tasksStore.markTaskComplete(selectedTask.value.id)
+async function markSelectedTaskComplete() {
+  if (!selectedTask.value || isCompletingTask.value) return
+
+  isCompletingTask.value = true
+
+  try {
+    await tasksStore.markTaskComplete(selectedTask.value.id)
+  } catch {
+  } finally {
+    isCompletingTask.value = false
+  }
 }
 
 async function deleteSelectedTask() {
@@ -343,11 +363,22 @@ function progressMessage(task: TaskItem) {
 
             <div class="mt-4 space-y-4">
               <div v-for="subtask in selectedTask.subtasks" :key="subtask.id" class="flex items-center gap-3">
-                <Checkbox :model-value="subtask.completed" @update:model-value="toggleSelectedSubtask(subtask.id)" />
-                <span class="text-[1.02rem]" :class="subtask.completed
-                  ? 'text-slate-400 line-through'
-                  : 'text-slate-700'
-                  ">
+                <div class="flex size-5 items-center justify-center">
+                  <LoaderCircle v-if="isSubtaskPending(subtask.id)" class="size-4 animate-spin text-blue-500" />
+                  <Checkbox
+                    v-else
+                    :model-value="subtask.completed"
+                    :disabled="isCompletingTask"
+                    @update:model-value="toggleSelectedSubtask(subtask.id)"
+                  />
+                </div>
+                <span
+                  class="text-[1.02rem]"
+                  :class="[
+                    subtask.completed ? 'text-slate-400 line-through' : 'text-slate-700',
+                    isSubtaskPending(subtask.id) ? 'opacity-60' : '',
+                  ]"
+                >
                   {{ subtask.title }}
                 </span>
               </div>
@@ -378,8 +409,9 @@ function progressMessage(task: TaskItem) {
 
         <Button type="button"
           class="h-14 rounded-[1.2rem] bg-blue-500 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-          :disabled="selectedTask.completed" @click="markSelectedTaskComplete">
-          {{ selectedTask.completed ? 'Task Completed' : 'Mark as Complete' }}
+          :disabled="selectedTask.completed || isCompletingTask" @click="markSelectedTaskComplete">
+          <LoaderCircle v-if="isCompletingTask" class="size-4 animate-spin" />
+          {{ selectedTask.completed ? 'Task Completed' : isCompletingTask ? 'Completing...' : 'Mark as Complete' }}
         </Button>
 
         <Button type="button" variant="outline"
@@ -424,7 +456,7 @@ function progressMessage(task: TaskItem) {
                   class="flex w-full resize-none rounded-xl border border-input bg-[#f4f6ff] px-4 py-3 text-base shadow-none outline-none transition-colors placeholder:text-slate-300 focus-visible:ring-1 focus-visible:ring-ring" />
               </div>
 
-              <div v-if="isCreateMode" class="space-y-3">
+              <div class="space-y-3">
                 <p class="text-[0.8rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
                   Subtask
                 </p>
@@ -452,9 +484,6 @@ function progressMessage(task: TaskItem) {
                   Add subtask
                 </Button>
               </div>
-              <p v-else class="text-sm text-slate-400">
-                Subtask editing will be connected next.
-              </p>
 
               <div class="flex items-center gap-4 rounded-[1.25rem] bg-[#f4f6ff] px-4 py-4">
                 <span class="flex size-10 items-center justify-center rounded-full bg-white text-slate-500">

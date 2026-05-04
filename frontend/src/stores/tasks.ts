@@ -36,45 +36,6 @@ type TaskProgress = {
   isComplete: boolean
 }
 
-function createId(prefix: string) {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `${prefix}-${crypto.randomUUID()}`
-  }
-
-  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
-}
-
-function nextDate(offsetDays = 0) {
-  const date = new Date()
-  date.setDate(date.getDate() + offsetDays)
-
-  return date.toISOString().slice(0, 10)
-}//TODO: delete later
-
-
-function normalizeSubtasks(
-  subtasks: TaskDraftSubtask[],
-  previous?: TaskSubtask[],
-) {
-  const existingSubtasks = new Map((previous ?? []).map((subtask) => [subtask.id, subtask]))
-
-  return subtasks
-    .map((subtask) => ({
-      id: subtask.id,
-      title: subtask.title.trim(),
-    }))
-    .filter((subtask) => subtask.title.length > 0)
-    .map((subtask) => {
-      const previousSubtask = subtask.id ? existingSubtasks.get(subtask.id) : undefined
-
-      return {
-        id: previousSubtask?.id ?? createId('subtask'),
-        title: subtask.title,
-        completed: previousSubtask?.completed ?? false,
-      }
-    })
-}
-
 export function getTaskProgress(task: TaskItem): TaskProgress {
   const totalCount = task.subtasks.length > 0 ? task.subtasks.length : 1
   const completedCount =
@@ -93,68 +54,6 @@ export function getTaskProgress(task: TaskItem): TaskProgress {
     isComplete: completedCount === totalCount,
   }
 }
-
-const initialTasks: TaskItem[] = [
-  {
-    id: createId('task'),
-    title: 'Project Architecture Review',
-    description: 'Review the current frontend structure and document the strongest opportunities for cleanup.',
-    assignedDate: nextDate(1),
-    completed: false,
-    subtasks: [
-      { id: createId('subtask'), title: 'Inspect routing setup', completed: true },
-      { id: createId('subtask'), title: 'Review layout components', completed: false },
-      { id: createId('subtask'), title: 'List technical risks', completed: false },
-    ],
-  },
-  {
-    id: createId('task'),
-    title: 'Q3 Financial Reporting',
-    description: 'Prepare the reporting structure and gather the remaining finance inputs for the Q3 summary.',
-    assignedDate: nextDate(2),
-    completed: false,
-    subtasks: [
-      { id: createId('subtask'), title: 'Collect invoices', completed: false },
-      { id: createId('subtask'), title: 'Draft summary sheet', completed: false },
-    ],
-  },
-  {
-    id: createId('task'),
-    title: 'Social Media Strategy',
-    description: 'Finalize the channel plan and map the next set of weekly content pieces.',
-    assignedDate: nextDate(3),
-    completed: false,
-    subtasks: [
-      { id: createId('subtask'), title: 'Audit current channels', completed: true },
-      { id: createId('subtask'), title: 'Define campaign themes', completed: true },
-      { id: createId('subtask'), title: 'Plan posting schedule', completed: true },
-      { id: createId('subtask'), title: 'Create asset checklist', completed: false },
-    ],
-  },
-  {
-    id: createId('task'),
-    title: 'Weekly Team Sync',
-    description: 'Prepare notes for the weekly sync and follow up on the open action items afterward.',
-    assignedDate: nextDate(4),
-    completed: true,
-    subtasks: [
-      { id: createId('subtask'), title: 'Collect agenda topics', completed: true },
-      { id: createId('subtask'), title: 'Share updates', completed: true },
-      { id: createId('subtask'), title: 'Capture blockers', completed: true },
-      { id: createId('subtask'), title: 'Send recap', completed: true },
-    ],
-  },
-  {
-    id: createId('task'),
-    title: 'Client Onboarding Call',
-    description: 'Walk the client through the next milestones and confirm the project onboarding timeline.',
-    assignedDate: nextDate(5),
-    completed: true,
-    subtasks: [
-      { id: createId('subtask'), title: 'Confirm attendees', completed: true },
-    ],
-  },
-]//TODO: delete later
 
 type BackendSubtask = {
   id: string
@@ -190,18 +89,69 @@ type GetTasksResponse = {
     data: BackendTask
  }
 
+type CreateSubtaskResponse = {
+  ok: true
+  data: {
+    id: string
+    title: string
+    isCompleted: boolean
+    taskId: string
+  }
+}
+
+type UpdateSubtaskResponse = {
+  ok: true
+  data: {
+    id: string
+    title: string
+    isCompleted: boolean
+    taskId: string
+  }
+}
+
+type DeleteSubtaskResponse = {
+  ok: true
+  message: string
+}
+
+type NormalizedDraftSubtask = {
+  id?: string
+  title: string
+}
+
+function normalizeDraftSubtasks(subtasks: TaskDraftSubtask[]): NormalizedDraftSubtask[] {
+  return subtasks
+    .map((subtask) => ({
+      id: subtask.id,
+      title: subtask.title.trim(),
+    }))
+    .filter((subtask) => subtask.title.length > 0)
+}
+
+function buildTaskPayload(draft: TaskDraft) {
+  const description = draft.description.trim()
+
+  return {
+    title: draft.title.trim(),
+    ...(description ? { description } : {}),
+    assignedDate: draft.assignedDate,
+  }
+}
+
 function mapBackendTask(task: BackendTask): TaskItem {
+  const subtasks = task.subtasks.map((subtask) => ({
+    id: subtask.id,
+    title: subtask.title,
+    completed: subtask.isCompleted,
+  }))
+
   return {
     id: task.id,
     title: task.title,
     description: task.description ?? '',
     assignedDate: task.assignatedDate ? task.assignatedDate.slice(0, 10) : '',
-    completed: task.isCompleted,
-    subtasks: task.subtasks.map((subtask) => ({
-      id: subtask.id,
-      title: subtask.title,
-      completed: subtask.isCompleted,
-    })),
+    completed: subtasks.length > 0 ? subtasks.every((subtask) => subtask.completed) : task.isCompleted,
+    subtasks,
   }
 }
 
@@ -221,23 +171,17 @@ export const useTasksStore = defineStore('tasks', {
 
       this.errorMessage = ''
       
-      try {
+     try {
         const response = await apiRequest<CreateTaskResponse>('/tasks', {
           method: 'POST',
           token: authStore.token,
-          body: JSON.stringify({
-            title: draft.title.trim(),
-            description: draft.description.trim(),
-            assignedDate: draft.assignedDate,
-          }),
+          body: JSON.stringify(buildTaskPayload(draft)),
         })
 
-        const subtaskTitles = draft.subtasks
-          .map((subtask) => subtask.title.trim())
-          .filter((title) => title.length > 0)
+        const subtaskTitles = normalizeDraftSubtasks(draft.subtasks).map((subtask) => subtask.title)
 
           for (const title of subtaskTitles) {
-            await apiRequest(`/tasks/${response.data.id}/subtasks`, {
+            await apiRequest<CreateSubtaskResponse>(`/tasks/${response.data.id}/subtasks`, {
               method: 'POST',
               token: authStore.token,
               body: JSON.stringify({ title }),
@@ -263,15 +207,68 @@ export const useTasksStore = defineStore('tasks', {
       this.errorMessage = ''
 
       try {
+        const existingTask = this.tasks.find((task) => task.id === taskId)
+
+        if (!existingTask) {
+          throw new Error('Task not found')
+        }
+
+        const normalizedDraftSubtasks = normalizeDraftSubtasks(draft.subtasks)
+        const existingSubtasksById = new Map(
+          existingTask.subtasks.map((subtask) => [subtask.id, subtask]),
+        )
+        const nextCompleted =
+          normalizedDraftSubtasks.length > 0
+            ? normalizedDraftSubtasks.every((subtask) => {
+                if (!subtask.id) return false
+
+                return existingSubtasksById.get(subtask.id)?.completed ?? false
+              })
+            : existingTask.completed
+
         await apiRequest<UpdateTaskResponse>(`/tasks/${taskId}`, {
           method: 'PATCH',
           token: authStore.token,
           body: JSON.stringify({
-            title: draft.title.trim(),
-            description: draft.description.trim(),
-            assignedDate: draft.assignedDate,
+            ...buildTaskPayload(draft),
+            isCompleted: nextCompleted,
           }),
         })
+
+        for (const subtask of existingTask.subtasks) {
+          const stillExists = normalizedDraftSubtasks.some((draftSubtask) => draftSubtask.id === subtask.id)
+
+          if (!stillExists) {
+            await apiRequest<DeleteSubtaskResponse>(`/tasks/${taskId}/subtasks/${subtask.id}`, {
+              method: 'DELETE',
+              token: authStore.token,
+            })
+          }
+        }
+
+        for (const draftSubtask of normalizedDraftSubtasks) {
+          if (!draftSubtask.id) {
+            await apiRequest<CreateSubtaskResponse>(`/tasks/${taskId}/subtasks`, {
+              method: 'POST',
+              token: authStore.token,
+              body: JSON.stringify({ title: draftSubtask.title }),
+            })
+
+            continue
+          }
+
+          const existingSubtask = existingSubtasksById.get(draftSubtask.id)
+
+          if (!existingSubtask || existingSubtask.title === draftSubtask.title) {
+            continue
+          }
+
+          await apiRequest<UpdateSubtaskResponse>(`/tasks/${taskId}/subtasks/${draftSubtask.id}`, {
+            method: 'PATCH',
+            token: authStore.token,
+            body: JSON.stringify({ title: draftSubtask.title }),
+          })
+        }
 
         await this.fetchTasks()
       } catch (error) {
@@ -280,28 +277,93 @@ export const useTasksStore = defineStore('tasks', {
         throw error
       }
     },
-    toggleSubtask(taskId: string, subtaskId: string) {
+    async toggleSubtask(taskId: string, subtaskId: string) {
+      const authStore = useAuthStore()
       const task = this.tasks.find((item) => item.id === taskId)
       const subtask = task?.subtasks.find((item) => item.id === subtaskId)
 
+      if(!authStore.token) {
+        throw new Error('Unauthorized')
+      }
+
       if (!task || !subtask) return
 
-      subtask.completed = !subtask.completed
-      task.completed = getTaskProgress(task).isComplete
-    },//TODO: delete later, has no use
-    markTaskComplete(taskId: string) {
+      const nextCompleted = !subtask.completed
+      const nextTaskCompleted = task.subtasks.every((item) => {
+        if (item.id === subtaskId) {
+          return nextCompleted
+        }
+
+        return item.completed
+      })
+
+      this.errorMessage = ''
+
+      try {
+        await apiRequest<UpdateSubtaskResponse>(`/tasks/${taskId}/subtasks/${subtaskId}`, {
+          method: 'PATCH',
+          token: authStore.token,
+          body: JSON.stringify({ isCompleted: nextCompleted }),
+        })
+
+        await apiRequest<UpdateTaskResponse>(`/tasks/${taskId}`, {
+          method: 'PATCH',
+          token: authStore.token,
+          body: JSON.stringify({ isCompleted: nextTaskCompleted }),
+        })
+
+        subtask.completed = nextCompleted
+        task.completed = nextTaskCompleted
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Failed to update subtask'
+
+        throw error
+      }
+    },
+    async markTaskComplete(taskId: string) {
+      const authStore = useAuthStore()
       const task = this.tasks.find((item) => item.id === taskId)
+
+      if(!authStore.token) {
+        throw new Error('Unauthorized')
+      }
 
       if (!task) return
 
-      if (task.subtasks.length > 0) {
-        task.subtasks = task.subtasks.map((subtask) => ({
-          ...subtask,
-          completed: true,
-        }))
-      }
+      this.errorMessage = ''
 
-      task.completed = true
+      try {
+        for (const subtask of task.subtasks) {
+          if (subtask.completed) {
+            continue
+          }
+
+          await apiRequest<UpdateSubtaskResponse>(`/tasks/${taskId}/subtasks/${subtask.id}`, {
+            method: 'PATCH',
+            token: authStore.token,
+            body: JSON.stringify({ isCompleted: true }),
+          })
+        }
+
+        await apiRequest<UpdateTaskResponse>(`/tasks/${taskId}`, {
+          method: 'PATCH',
+          token: authStore.token,
+          body: JSON.stringify({ isCompleted: true }),
+        })
+
+        if (task.subtasks.length > 0) {
+          task.subtasks = task.subtasks.map((subtask) => ({
+            ...subtask,
+            completed: true,
+          }))
+        }
+
+        task.completed = true
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Failed to complete task'
+
+        throw error
+      }
     },
     async deleteTask(taskId: string) {
       const authStore = useAuthStore()

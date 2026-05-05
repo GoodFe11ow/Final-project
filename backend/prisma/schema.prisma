@@ -19,6 +19,7 @@ model User {
   passwordHash String
 
   tasks         Task[]
+  focusSessions FocusSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -50,4 +51,19 @@ model Subtasks {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model FocusSession {
+  id String @id @default(cuid())
+  mode String
+  completionType String
+  plannedDurationMs Int
+  actualElapsedMs Int
+  task String
+  startedAt DateTime
+  endedAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

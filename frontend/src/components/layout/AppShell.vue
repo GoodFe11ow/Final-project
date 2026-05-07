@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { computed } from 'vue'
-import { CalendarDays, Flame, House, ListChecks, TimerReset } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import { CalendarDays, Flame, House, ListChecks, LoaderCircle, TimerReset } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { apiRequest } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 
 const props = withDefaults(
   defineProps<{
@@ -15,7 +17,17 @@ const props = withDefaults(
 
 const route = useRoute()
 const router = useRouter()
-const HOME_STREAK_DAYS = 5
+const authStore = useAuthStore()
+
+type StatsSummaryResponse = {
+  ok: true
+  data: {
+    currentStreakDays: number
+  }
+}
+
+const homeStreakDays = ref(0)
+const isLoadingHomeStreak = ref(false)
 
 const navItems = computed(() => [
   { name: 'Home', to: '/home', icon: House },
@@ -35,6 +47,37 @@ const mainInsetClass = computed(() =>
     ? 'px-4 pb-4 pt-4'
     : 'px-4 pb-[5.5rem] pt-[3.25rem]',
 )
+
+async function fetchHomeStreak() {
+  if (!authStore.token) {
+    homeStreakDays.value = 0
+    return
+  }
+
+  isLoadingHomeStreak.value = true
+
+  try {
+    const response = await apiRequest<StatsSummaryResponse>('/stats/summary', {
+      token: authStore.token,
+    })
+
+    homeStreakDays.value = response.data.currentStreakDays
+  } catch {
+    homeStreakDays.value = 0
+  } finally {
+    isLoadingHomeStreak.value = false
+  }
+}
+
+watch(
+  () => route.path,
+  (path) => {
+    if (path === '/home') {
+      void fetchHomeStreak()
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -50,10 +93,14 @@ const mainInsetClass = computed(() =>
       <div class="relative mx-auto w-full max-w-md">
         <div
           v-if="showHomeStreak"
-          class="pointer-events-auto absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-background/85 px-3 py-2 text-sm font-semibold text-slate-700 shadow-[0_14px_30px_-18px_rgba(15,23,42,0.35)] backdrop-blur-sm"
+          class="pointer-events-auto absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-background/85 px-3 py-2 text-m font-semibold text-slate-700 shadow-[0_14px_30px_-18px_rgba(15,23,42,0.35)] backdrop-blur-sm"
         >
-          <Flame class="size-4 text-orange-400" />
-          <span>{{ HOME_STREAK_DAYS }} days</span>
+          <Flame class="size-6 text-orange-400" />
+          <LoaderCircle
+            v-if="isLoadingHomeStreak"
+            class="size-6 animate-spin text-slate-400"
+          />
+          <span>{{ homeStreakDays }} days</span>
         </div>
 
         <div class="pointer-events-auto absolute right-4 top-4">

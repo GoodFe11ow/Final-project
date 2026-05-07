@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
+import TimerDurationDialog from '@/components/settings/TimerDurationDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useTimerSettingsStore } from '@/stores/timer-settings'
+import { useFocusStore } from '@/stores/focus'
 import {
   Check,
   ChevronRight,
@@ -18,10 +20,31 @@ import {
   TimerOff,
   TimerReset,
 } from 'lucide-vue-next'
+import { apiRequest } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 type FocusModeId = 'focus' | 'break'
 type TimerState = 'idle' | 'running' | 'paused' | 'completed'
 type CompletionType = 'completed-normally' | 'stopped-early'
+
+type CreateFocusSessionPayload = {
+  mode: FocusModeId
+  completionType: CompletionType
+  plannedDurationMs: number
+  actualElapsedMs: number
+  task: string
+  startedAt: string
+  endedAt: string
+}
+
+type CreateFocusSessionResponse = {
+  ok: true
+  data: {
+    id: string
+  }
+}
 
 type FocusMode = {
   id: FocusModeId
@@ -41,6 +64,9 @@ type SessionSummary = {
   task: string
 }
 
+const sessionStartedAtMs = ref<number | null>(null)
+const isSavingSession = ref(false)
+
 const demoTasks = [
   'Quarterly Report Strategy',
   'Design System Audit',
@@ -48,7 +74,9 @@ const demoTasks = [
 ]
 const CURRENT_STREAK_DAYS = 4
 
+const route = useRoute()
 const router = useRouter()
+const focusStore = useFocusStore()
 const timerSettingsStore = useTimerSettingsStore()
 const { breakDurationSeconds, focusDurationSeconds } = storeToRefs(timerSettingsStore)
 
@@ -76,7 +104,7 @@ const modes = computed<FocusMode[]>(() => [
 const circleRadius = 138
 const circleCircumference = 2 * Math.PI * circleRadius
 
-const taskIndex = ref(0)
+const taskIndex = ref(normalizeTaskIndex(focusStore.lastUsedTaskIndex))
 const selectedMode = ref<FocusModeId>('focus')
 const timerState = ref<TimerState>('idle')
 const plannedDurationMs = ref(getModeConfig('focus').durationMs)
@@ -85,6 +113,7 @@ const accumulatedElapsedMs = ref(0)
 const runningSinceMs = ref<number | null>(null)
 const tickIntervalId = ref<number | null>(null)
 const sessionSummary = ref<SessionSummary | null>(null)
+const isFocusDurationDialogOpen = ref(false)
 
 const currentMode = computed(() => getModeConfig(selectedMode.value))
 const currentTask = computed(() => demoTasks[taskIndex.value] ?? demoTasks[0] ?? 'Focus session')
@@ -180,8 +209,24 @@ const timerPrimaryText = computed(() => {
   return formatDuration(remainingMs.value)
 })
 
+const focusDurationDialogConfig = computed(() => ({
+  title: 'Focus Duration',
+  description: 'Choose your default deep work session length.',
+  selectedValue: focusDurationSeconds.value,
+  options: [25 * 60, 30 * 60, 35 * 60, 45 * 60, 50 * 60, 60 * 60],
+}))
+
 function getModeConfig(id: FocusModeId) {
   return modes.value.find((mode) => mode.id === id) ?? modes.value[0]
+}
+
+function normalizeTaskIndex(index: number) {
+  if (demoTasks.length === 0) return 0
+
+  const safeIndex = Number.isFinite(index) ? Math.floor(index) : 0
+  const normalizedIndex = safeIndex % demoTasks.length
+
+  return normalizedIndex >= 0 ? normalizedIndex : normalizedIndex + demoTasks.length
 }
 
 function formatDuration(durationMs: number) {
@@ -242,7 +287,7 @@ function finalizeSession(
   runningSinceMs.value = null
   remainingMs.value = Math.max(plannedDurationMs.value - actualElapsed, 0)
 
-  sessionSummary.value = {
+  const summary = {
     plannedDurationMs: plannedDurationMs.value,
     actualElapsedMs: actualElapsed,
     completionType,
@@ -250,7 +295,12 @@ function finalizeSession(
     task: currentTask.value,
   }
 
+  sessionSummary.value = summary
   timerState.value = 'completed'
+
+  if (completionType === 'completed-normally') {
+    void persistCompletedSession(summary)
+  }
 }
 
 function startTicking() {
@@ -276,6 +326,7 @@ function resetToIdle() {
   sessionSummary.value = null
   plannedDurationMs.value = currentMode.value.durationMs
   remainingMs.value = plannedDurationMs.value
+  sessionStartedAtMs.value = null
 }
 
 function handleModeSelect(modeId: FocusModeId) {
@@ -287,10 +338,16 @@ function handleModeSelect(modeId: FocusModeId) {
 function handleChangeTask() {
   if (timerState.value !== 'idle') return
 
-  taskIndex.value = (taskIndex.value + 1) % demoTasks.length
+  taskIndex.value = normalizeTaskIndex(taskIndex.value + 1)
+  persistCurrentTask()
 }
 
 function startSession() {
+  sessionStartedAtMs.value = Date.now()
+  if (selectedMode.value === 'focus') {
+    persistCurrentTask()
+  }
+
   sessionSummary.value = null
   accumulatedElapsedMs.value = 0
   plannedDurationMs.value = currentMode.value.durationMs
@@ -324,6 +381,73 @@ function stopSession() {
   finalizeSession('stopped-early', elapsedNow)
 }
 
+function persistCurrentTask() {
+  focusStore.setLastUsedTaskIndex(taskIndex.value, demoTasks.length)
+}
+
+function openFocusDurationDialog() {
+  if (timerState.value !== 'idle') return
+
+  selectedMode.value = 'focus'
+  isFocusDurationDialogOpen.value = true
+}
+
+function updateFocusDuration(nextValue: number) {
+  timerSettingsStore.setDurationSeconds('focus', nextValue)
+}
+
+function consumeHomeEntryIntent() {
+  const shouldAutostart = route.query.autostart === '1'
+  const shouldOpenFocusDuration = route.query.modal === 'focus-duration'
+
+  if (!shouldAutostart && !shouldOpenFocusDuration) return
+
+  selectedMode.value = 'focus'
+  taskIndex.value = normalizeTaskIndex(focusStore.lastUsedTaskIndex)
+
+  if (timerState.value === 'idle') {
+    if (shouldAutostart) {
+      startSession()
+    } else if (shouldOpenFocusDuration) {
+      openFocusDurationDialog()
+    }
+  }
+
+  void router.replace({ path: route.path })
+}
+
+const sessionSaveError = ref('')
+
+async function persistCompletedSession(summary: SessionSummary) {
+  if(!authStore.token || sessionStartedAtMs.value === null) return
+
+  isSavingSession.value = true
+  sessionSaveError.value = ''
+
+  try {
+     await apiRequest<CreateFocusSessionResponse>('/focus-sessions', {
+      method: 'POST',
+      token: authStore.token,
+      body: JSON.stringify({
+        mode: summary.mode,
+        completionType: summary.completionType,
+        plannedDurationMs: summary.plannedDurationMs,
+        actualElapsedMs: summary.actualElapsedMs,
+        task: summary.task,
+        startedAt: new Date(sessionStartedAtMs.value).toISOString(),
+        endedAt: new Date().toISOString(),
+      } satisfies CreateFocusSessionPayload)
+     })
+  } catch (error) {
+    sessionSaveError.value =
+      error instanceof Error ? error.message : 'Failed to save focus session'
+    console.error('Failed to save focus session', error)
+  } 
+  finally  {
+    isSavingSession.value = false
+  }
+}
+
 function goHome() {
   router.push('/home')
 }
@@ -347,6 +471,14 @@ watch(
 
     plannedDurationMs.value = nextDurationMs
     remainingMs.value = nextDurationMs
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [route.query.autostart, route.query.modal] as const,
+  () => {
+    consumeHomeEntryIntent()
   },
   { immediate: true },
 )
@@ -706,5 +838,14 @@ watch(
         </div>
       </template>
     </section>
+
+    <TimerDurationDialog
+      v-model:open="isFocusDurationDialogOpen"
+      :title="focusDurationDialogConfig.title"
+      :description="focusDurationDialogConfig.description"
+      :selected-value="focusDurationDialogConfig.selectedValue"
+      :options="focusDurationDialogConfig.options"
+      @select="updateFocusDuration"
+    />
   </AppShell>
 </template>

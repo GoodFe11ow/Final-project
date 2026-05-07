@@ -3,17 +3,11 @@ import AppShell from '@/components/layout/AppShell.vue'
 import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Check, Clock3, Music2, Play, Plus } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { ClipboardList, Clock3, Play, Plus } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
-
-type HomeTask = {
-  title: string
-  source: string
-  progress?: string
-  completed?: boolean
-}
+import { getTaskProgress, useTasksStore } from '@/stores/tasks'
 
 type QuickAction = {
   label: string
@@ -22,44 +16,101 @@ type QuickAction = {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const tasksStore = useTasksStore()
 const { user } = storeToRefs(authStore)
+const { tasks } = storeToRefs(tasksStore)
+const hasSeenHomeBefore = ref(false)
 
-const todayLabel = 'Thursday, 24 Oct'
+const todayLabel = computed(() =>
+  new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date()),
+)
 const userName = computed(() => user.value?.name ?? 'User')
+const welcomeHeading = computed(() =>
+  hasSeenHomeBefore.value ? 'Welcome back,' : 'Welcome,',
+)
 
-const currentTasks: HomeTask[] = [
-  {
-    title: 'Design System Audit',
-    source: 'Component Library',
-    progress: '1/2',
-  },
-  {
-    title: 'Client Meeting Prep',
-    source: 'Presentation Deck',
-    progress: '0/4',
-  },
-  {
-    title: 'Review Code PRs',
-    source: 'Frontend Repo',
-    completed: true,
-  },
-  {
-    title: 'Weekly Planning',
-    source: 'Notion',
-    progress: '1/2',
-  },
-]
+const currentTasks = computed(() => {
+  return [...tasks.value]
+    .slice(-4)
+    .reverse()
+    .map((task) => {
+      const progress = getTaskProgress(task)
+
+      return {
+        id: task.id,
+        title: task.title,
+        statusLabel: progress.isComplete
+          ? 'Done'
+          : `${progress.completedCount}/${progress.totalCount}`,
+        completed: progress.isComplete,
+      }
+    })
+})
 
 const quickActions: QuickAction[] = [
   {
-    label: 'Custom Timer',
+    label: 'Timer Settings',
     icon: Clock3,
   },
   {
-    label: 'Focus Sounds',
-    icon: Music2,
+    label: 'Change Task',
+    icon: ClipboardList,
   },
 ]
+
+function openQuickFocusSession() {
+  router.push({
+    path: '/focus',
+    query: { autostart: '1' },
+  })
+}
+
+function handleQuickAction(label: QuickAction['label']) {
+  if (label === 'Timer Settings') {
+    router.push({
+      path: '/focus',
+      query: { modal: 'focus-duration' },
+    })
+    return
+  }
+
+  router.push('/focus')
+}
+
+function openCreateTaskModal() {
+  router.push({
+    path: '/tasks',
+    query: { modal: 'create' },
+  })
+}
+
+function getHomeSeenStorageKey(userId: string) {
+  return `productivity-home-seen:${userId}`
+}
+
+watch(
+  () => user.value?.id ?? '',
+  (userId) => {
+    if (!userId) {
+      hasSeenHomeBefore.value = false
+      return
+    }
+
+    const storageKey = getHomeSeenStorageKey(userId)
+    const hasSeen = localStorage.getItem(storageKey) === '1'
+
+    hasSeenHomeBefore.value = hasSeen
+
+    if (!hasSeen) {
+      localStorage.setItem(storageKey, '1')
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -67,7 +118,7 @@ const quickActions: QuickAction[] = [
     <section class="flex flex-1 flex-col gap-5 pb-2">
       <div class="space-y-3 pt-1 text-center">
         <div
-          class="mx-auto inline-flex rounded-full bg-slate-100/90 px-5 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-blue-500 shadow-[0_12px_24px_-20px_rgba(59,130,246,0.8)] ring-1 ring-slate-200/70"
+          class="text-[2.05rem] font-semibold uppercase tracking-[0.2em] text-slate-900"
         >
           Home
         </div>
@@ -79,89 +130,77 @@ const quickActions: QuickAction[] = [
         <h2
           class="mx-auto max-w-[16rem] text-[2rem] font-light leading-tight tracking-[-0.05em] text-slate-800 sm:max-w-none"
         >
-          Welcome back,
+          {{ welcomeHeading }}
           <span class="font-normal text-blue-400">{{ userName }}!</span>
         </h2>
       </div>
 
       <Card
-        class="overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.28)]"
+        class="overflow-hidden rounded-[2rem] border-slate-200/80 bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.28)]"
       >
         <CardContent class="p-0">
           <div class="flex items-center justify-between px-5 py-4">
             <p
               class="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-slate-500"
             >
-              Current Tasks
+              Recent Tasks
             </p>
             <Button
               type="button"
               size="icon-sm"
-              class="size-7 rounded-full bg-blue-500 p-0 text-white shadow-[0_12px_24px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-              @click="router.push('/tasks')"
+              class="size-9 rounded-xl bg-blue-500 p-0 text-white shadow-[0_12px_24px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
+              @click="openCreateTaskModal"
             >
-              <Plus class="size-3.5" />
+              <Plus class="size-4" />
             </Button>
           </div>
 
-          <div class="divide-y divide-slate-100">
+          <div v-if="currentTasks.length > 0" class="divide-y divide-slate-100">
             <article
               v-for="task in currentTasks"
-              :key="task.title"
+              :key="task.id"
               class="flex items-center gap-3 px-5 py-4"
             >
               <div class="min-w-0 flex-1">
                 <h3 class="truncate text-[1.08rem] font-medium tracking-[-0.02em] text-slate-800">
                   {{ task.title }}
                 </h3>
-                <p class="mt-0.5 text-sm text-slate-400">
-                  {{ task.source }}
-                </p>
               </div>
 
               <span
-                v-if="task.completed"
-                class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-500"
-              >
-                Done
-              </span>
-              <span
-                v-else
-                class="rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
-              >
-                {{ task.progress }}
-              </span>
-
-              <span
-                class="flex size-7 shrink-0 items-center justify-center rounded-full border"
+                class="rounded-full px-3 py-1 text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
                 :class="
                   task.completed
-                    ? 'border-blue-500 bg-blue-500 text-white'
-                    : 'border-slate-200 bg-white text-transparent'
+                    ? 'bg-emerald-50 text-emerald-500'
+                    : 'bg-sky-50 text-sky-500'
                 "
               >
-                <Check class="size-4" />
+                {{ task.statusLabel }}
               </span>
             </article>
+          </div>
+
+          <div v-else class="px-5 py-6 text-sm text-slate-400">
+            No recent tasks yet.
           </div>
         </CardContent>
       </Card>
 
       <Card
-        class="rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.26)]"
+        class="rounded-[2rem] border-slate-200/80 bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.26)]"
       >
         <CardContent class="space-y-4 p-5">
           <Button
             type="button"
             class="h-14 w-full rounded-[1.2rem] bg-blue-500 px-5 text-sm font-semibold uppercase tracking-[0.08em] text-white shadow-[0_18px_30px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-            @click="router.push('/focus')"
+            @click="openQuickFocusSession"
           >
             <span
               class="mr-2 flex size-7 items-center justify-center rounded-full bg-white text-blue-500 shadow-sm"
             >
               <Play class="size-4 fill-current" />
             </span>
-            Start Focus Session
+            Quick Focus Session
           </Button>
 
           <div class="grid grid-cols-2 gap-3">
@@ -171,7 +210,7 @@ const quickActions: QuickAction[] = [
               type="button"
               variant="ghost"
               class="flex h-auto min-h-24 flex-col items-center justify-center gap-2 rounded-[1.35rem] bg-slate-50 px-3 py-4 text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] hover:bg-slate-100"
-              @click="router.push('/focus')"
+              @click="handleQuickAction(action.label)"
             >
               <component :is="action.icon" class="size-5 text-blue-500" />
               <span class="text-center text-sm font-medium leading-snug">

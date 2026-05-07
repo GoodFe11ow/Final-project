@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -39,6 +40,8 @@ type TaskFormState = {
 
 const tasksStore = useTasksStore()
 const { tasks, isLoading, errorMessage } = storeToRefs(tasksStore)
+const route = useRoute()
+const router = useRouter()
 
 const selectedTaskId = ref<string | null>(null)
 const dialogMode = ref<DialogMode | null>(null)
@@ -131,6 +134,7 @@ function fillTaskForm(task: TaskItem) {
 }
 
 function openCreateDialog() {
+  selectedTaskId.value = null
   resetTaskForm()
   dialogMode.value = 'create'
 }
@@ -244,6 +248,21 @@ function progressMessage(task: TaskItem) {
 
   return 'Start with the first small step.'
 }
+
+function consumeRouteIntent() {
+  if (route.query.modal !== 'create') return
+
+  openCreateDialog()
+  void router.replace({ path: route.path })
+}
+
+watch(
+  () => route.query.modal,
+  () => {
+    consumeRouteIntent()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

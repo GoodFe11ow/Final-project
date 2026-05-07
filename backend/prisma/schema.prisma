@@ -15,7 +15,7 @@ datasource db {
 model User {
   id           String @id @default(cuid())
   email        String @unique
-  name         String 
+  name         String
   passwordHash String
 
   tasks         Task[]
@@ -30,40 +30,41 @@ model Task {
   title          String
   description    String?
   assignatedDate DateTime?
-  isCompleted    Boolean @default(false)
+  isCompleted    Boolean   @default(false)
+  completedAt    DateTime?
 
-  userId         String
-  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  subtasks       Subtasks[]
+  subtasks Subtasks[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Subtasks {
-  id            String @id @default(cuid())
-  title         String
-  isCompleted   Boolean @default(false)
+  id          String  @id @default(cuid())
+  title       String
+  isCompleted Boolean @default(false)
 
-  taskId        String
-  task          Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model FocusSession {
-  id String @id @default(cuid())
-  mode String
-  completionType String
+  id                String   @id @default(cuid())
+  mode              String
+  completionType    String
   plannedDurationMs Int
-  actualElapsedMs Int
-  task String
-  startedAt DateTime
-  endedAt DateTime
-  createdAt DateTime @default(now())
+  actualElapsedMs   Int
+  task              String
+  startedAt         DateTime
+  endedAt           DateTime
+  createdAt         DateTime @default(now())
 
   userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -231,7 +231,10 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
                             : null,
                     }
                 : {}),
-                ...(isCompleted !== undefined ? { isCompleted } : {}),
+                ...(isCompleted !== undefined ? { 
+                    isCompleted,
+                    completedAt: isCompleted ? new Date() : null,
+                } : {}),
             }
         });
 

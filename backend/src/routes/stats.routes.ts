@@ -7,21 +7,52 @@ const statsRouter = Router();
 statsRouter.use(requireAuth);
 
 statsRouter.get("/stats/summary", async (req, res, next) => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    const day = weekStart.getDate();
+    const diffToMonday = day === 0 ? 6 : day - 1;
+
+    weekStart.setDate(weekStart.getDate() - diffToMonday);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
     try {
-        const completedTasksCount = await prisma.task.count({
+        // const completedTasksCount = await prisma.task.count({
+        //     where: {
+        //         userId: req.user!.id,
+        //         isCompleted: true,
+        //         completedAt: {
+        //             gte: weekStart,
+        //             lt: weekEnd,
+        //         }
+        //     },
+        // });
+
+        const weeklyfocusSession = await prisma.focusSession.findMany({
             where: {
                 userId: req.user!.id,
-                isCompleted: true,
+                mode: "focus",
+                startedAt: {
+                    gte: weekStart,
+                    lt: weekEnd,
+                }
+            },
+            select: {
+                actualElapsedMs: true,
+            },
+            orderBy: {
+                startedAt: "desc",
             },
         });
 
-        const focusSession = await prisma.focusSession.findMany({
+        const focusSessions = await prisma.focusSession.findMany({
             where: {
                 userId: req.user!.id,
                 mode: "focus",
             },
             select: {
-                actualElapsedMs: true,
                 startedAt: true,
             },
             orderBy: {
@@ -29,12 +60,47 @@ statsRouter.get("/stats/summary", async (req, res, next) => {
             },
         });
 
+        const completedTasksThisWeek = await prisma.task.findMany({
+            where: {
+                userId: req.user!.id,
+                isCompleted: true,
+                completedAt: {
+                    gte: weekStart,
+                    lt: weekEnd,
+                },
+            },
+            select: {
+                completedAt: true
+            },
+        });
+
+        const weeklyCompletions = Array.from({ length: 7}, (_, day) => ({
+            day,
+            value: 0
+        }));
+
+        for (const task of completedTasksThisWeek) {
+            if(!task.completedAt) continue;
+
+            const jsDay = task.completedAt.getDay();
+            const weekDayIndex = jsDay === 0 ? 6 : jsDay - 1;
+
+            const bucket = weeklyCompletions[weekDayIndex];
+
+            if(!bucket) continue;
+
+            bucket.value += 1;
+        }
+
+        const completedTasksCount = completedTasksThisWeek.length;
+
+
         const focusMinutesTotal = Math.floor(
-            focusSession.reduce((total, session) => total + session.actualElapsedMs, 0) / 60000,
+            weeklyfocusSession.reduce((total, session) => total + session.actualElapsedMs, 0) / 60000,
         );
 
         const uniqueFocusDays = new Set(
-            focusSession.map((session) => session.startedAt.toISOString().slice(0, 10)),
+            focusSessions.map((session) => session.startedAt.toISOString().slice(0, 10)),
         );
 
         let currentStreakDays = 0;
@@ -58,6 +124,7 @@ statsRouter.get("/stats/summary", async (req, res, next) => {
                 completedTasksCount,
                 focusMinutesTotal,
                 currentStreakDays,
+                weeklyCompletions,
             },
         });
     } catch (error) {

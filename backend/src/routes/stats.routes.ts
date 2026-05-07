@@ -9,7 +9,7 @@ statsRouter.use(requireAuth);
 statsRouter.get("/stats/summary", async (req, res, next) => {
     const now = new Date();
     const weekStart = new Date(now);
-    const day = weekStart.getDate();
+    const day = weekStart.getDay();
     const diffToMonday = day === 0 ? 6 : day - 1;
 
     weekStart.setDate(weekStart.getDate() - diffToMonday);
@@ -30,7 +30,7 @@ statsRouter.get("/stats/summary", async (req, res, next) => {
         //     },
         // });
 
-        const weeklyfocusSession = await prisma.focusSession.findMany({
+        const weeklyFocusSessions = await prisma.focusSession.findMany({
             where: {
                 userId: req.user!.id,
                 mode: "focus",
@@ -96,7 +96,7 @@ statsRouter.get("/stats/summary", async (req, res, next) => {
 
 
         const focusMinutesTotal = Math.floor(
-            weeklyfocusSession.reduce((total, session) => total + session.actualElapsedMs, 0) / 60000,
+            weeklyFocusSessions.reduce((total, session) => total + session.actualElapsedMs, 0) / 60000,
         );
 
         const uniqueFocusDays = new Set(

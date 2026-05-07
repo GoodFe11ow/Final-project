@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
-import { CalendarDays, House, ListChecks, TimerReset } from 'lucide-vue-next'
+import { CalendarDays, Flame, House, ListChecks, TimerReset } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
 const props = withDefaults(
@@ -15,6 +15,7 @@ const props = withDefaults(
 
 const route = useRoute()
 const router = useRouter()
+const HOME_STREAK_DAYS = 5
 
 const navItems = computed(() => [
   { name: 'Home', to: '/home', icon: House },
@@ -26,6 +27,8 @@ const navItems = computed(() => [
 function isActive(path: string) {
   return route.path === path
 }
+
+const showHomeStreak = computed(() => route.path === '/home')
 
 const mainInsetClass = computed(() =>
   props.chromeHidden
@@ -45,6 +48,14 @@ const mainInsetClass = computed(() =>
       "
     >
       <div class="relative mx-auto w-full max-w-md">
+        <div
+          v-if="showHomeStreak"
+          class="pointer-events-auto absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-background/85 px-3 py-2 text-sm font-semibold text-slate-700 shadow-[0_14px_30px_-18px_rgba(15,23,42,0.35)] backdrop-blur-sm"
+        >
+          <Flame class="size-4 text-orange-400" />
+          <span>{{ HOME_STREAK_DAYS }} days</span>
+        </div>
+
         <div class="pointer-events-auto absolute right-4 top-4">
           <Button
             type="button"

@@ -3,7 +3,7 @@ import AppShell from '@/components/layout/AppShell.vue'
 import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Check, Clock3, Flame, Music2, Play, Plus } from 'lucide-vue-next'
+import { Check, Clock3, Music2, Play, Plus } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
@@ -178,24 +178,6 @@ const quickActions: QuickAction[] = [
                 {{ action.label }}
               </span>
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card
-        class="rounded-[2rem] border-blue-100/60 bg-[linear-gradient(180deg,#eef5ff_0%,#f8fbff_100%)] shadow-[0_24px_60px_-34px_rgba(59,130,246,0.3)]"
-      >
-        <CardContent
-          class="flex min-h-[9rem] flex-col items-center justify-center gap-2 p-6 text-center"
-        >
-          <p
-            class="text-[0.78rem] font-semibold uppercase tracking-[0.24em] text-blue-400"
-          >
-            Daily Streak
-          </p>
-          <div class="flex items-center gap-2 text-[2.1rem] font-semibold tracking-[-0.05em] text-slate-800">
-            <Flame class="size-5 text-orange-400" />
-            <span>5 Days</span>
           </div>
         </CardContent>
       </Card>

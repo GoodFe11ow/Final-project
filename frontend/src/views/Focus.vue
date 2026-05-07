@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '@/components/layout/AppShell.vue'
@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Coffee,
   Flame,
+  LoaderCircle,
   Pause,
   Play,
   Square,
@@ -22,8 +23,11 @@ import {
 } from 'lucide-vue-next'
 import { apiRequest } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
+import { useTasksStore } from '@/stores/tasks'
 
 const authStore = useAuthStore()
+const tasksStore = useTasksStore()
+const { tasks } = storeToRefs(tasksStore)
 
 type FocusModeId = 'focus' | 'break'
 type TimerState = 'idle' | 'running' | 'paused' | 'completed'
@@ -43,6 +47,13 @@ type CreateFocusSessionResponse = {
   ok: true
   data: {
     id: string
+  }
+}
+
+type StatsSummaryResponse = {
+  ok: true
+  data: {
+    currentStreakDays: number
   }
 }
 
@@ -66,13 +77,19 @@ type SessionSummary = {
 
 const sessionStartedAtMs = ref<number | null>(null)
 const isSavingSession = ref(false)
+const currentStreakDays = ref(0)
+const isLoadingCurrentStreak = ref(false)
 
-const demoTasks = [
-  'Quarterly Report Strategy',
-  'Design System Audit',
-  'Client Meeting Prep',
-]
-const CURRENT_STREAK_DAYS = 4
+const focusTaskTitles = computed(() => {
+  const activeTaskTitles = tasks.value
+    .filter((task) => !task.completed)
+    .map((task) => task.title.trim())
+    .filter((title) => title.length > 0)
+
+  return activeTaskTitles.length > 0
+    ? activeTaskTitles
+    : ['General Focus Session']
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -112,11 +129,14 @@ const remainingMs = ref(plannedDurationMs.value)
 const accumulatedElapsedMs = ref(0)
 const runningSinceMs = ref<number | null>(null)
 const tickIntervalId = ref<number | null>(null)
+const animationFrameId = ref<number | null>(null)
+const animationNowMs = ref(Date.now())
 const sessionSummary = ref<SessionSummary | null>(null)
 const isFocusDurationDialogOpen = ref(false)
+const isTaskDropdownOpen = ref(false)
 
 const currentMode = computed(() => getModeConfig(selectedMode.value))
-const currentTask = computed(() => demoTasks[taskIndex.value] ?? demoTasks[0] ?? 'Focus session')
+const currentTask = computed(() => focusTaskTitles.value[taskIndex.value] ?? 'Focus session')
 const hideAppChrome = computed(() => {
   return timerState.value === 'running' || timerState.value === 'paused'
 })
@@ -129,10 +149,18 @@ const elapsedMs = computed(() => {
   return Math.max(0, plannedDurationMs.value - remainingMs.value)
 })
 
+const visualElapsedMs = computed(() => {
+  if (timerState.value === 'running') {
+    return getLiveElapsedMs(animationNowMs.value)
+  }
+
+  return elapsedMs.value
+})
+
 const progressRatio = computed(() => {
   if (plannedDurationMs.value <= 0) return 0
 
-  return Math.min(1, elapsedMs.value / plannedDurationMs.value)
+  return Math.min(1, visualElapsedMs.value / plannedDurationMs.value)
 })
 
 const progressOffset = computed(() => {
@@ -216,17 +244,25 @@ const focusDurationDialogConfig = computed(() => ({
   options: [25 * 60, 30 * 60, 35 * 60, 45 * 60, 50 * 60, 60 * 60],
 }))
 
+const focusTaskOptions = computed(() => {
+  return focusTaskTitles.value.map((title, index) => ({
+    index,
+    title,
+    isSelected: index === taskIndex.value,
+  }))
+})
+
 function getModeConfig(id: FocusModeId) {
   return modes.value.find((mode) => mode.id === id) ?? modes.value[0]
 }
 
-function normalizeTaskIndex(index: number) {
-  if (demoTasks.length === 0) return 0
+function normalizeTaskIndex(index: number, taskCount = focusTaskTitles.value.length) {
+  if (taskCount <= 0) return 0
 
   const safeIndex = Number.isFinite(index) ? Math.floor(index) : 0
-  const normalizedIndex = safeIndex % demoTasks.length
+  const normalizedIndex = safeIndex % taskCount
 
-  return normalizedIndex >= 0 ? normalizedIndex : normalizedIndex + demoTasks.length
+  return normalizedIndex >= 0 ? normalizedIndex : normalizedIndex + taskCount
 }
 
 function formatDuration(durationMs: number) {
@@ -255,6 +291,13 @@ function clearTickInterval() {
   }
 }
 
+function clearAnimationFrame() {
+  if (animationFrameId.value !== null) {
+    window.cancelAnimationFrame(animationFrameId.value)
+    animationFrameId.value = null
+  }
+}
+
 function getLiveElapsedMs(now = Date.now()) {
   const runningElapsed =
     runningSinceMs.value !== null ? now - runningSinceMs.value : 0
@@ -277,6 +320,7 @@ function finalizeSession(
   elapsedMsValue = getLiveElapsedMs(),
 ) {
   clearTickInterval()
+  clearAnimationFrame()
 
   const actualElapsed = Math.max(
     0,
@@ -303,8 +347,26 @@ function finalizeSession(
   }
 }
 
+function startAnimationLoop() {
+  clearAnimationFrame()
+
+  const animate = () => {
+    animationNowMs.value = Date.now()
+
+    if (timerState.value === 'running') {
+      animationFrameId.value = window.requestAnimationFrame(animate)
+      return
+    }
+
+    animationFrameId.value = null
+  }
+
+  animationFrameId.value = window.requestAnimationFrame(animate)
+}
+
 function startTicking() {
   clearTickInterval()
+  startAnimationLoop()
 
   const tick = () => {
     const currentElapsed = syncRemainingTime()
@@ -320,6 +382,8 @@ function startTicking() {
 
 function resetToIdle() {
   clearTickInterval()
+  clearAnimationFrame()
+  isTaskDropdownOpen.value = false
   timerState.value = 'idle'
   accumulatedElapsedMs.value = 0
   runningSinceMs.value = null
@@ -327,23 +391,40 @@ function resetToIdle() {
   plannedDurationMs.value = currentMode.value.durationMs
   remainingMs.value = plannedDurationMs.value
   sessionStartedAtMs.value = null
+  animationNowMs.value = Date.now()
 }
 
 function handleModeSelect(modeId: FocusModeId) {
   if (timerState.value !== 'idle') return
 
   selectedMode.value = modeId
+  if (modeId !== 'focus') {
+    isTaskDropdownOpen.value = false
+  }
 }
 
 function handleChangeTask() {
+  if (timerState.value !== 'idle' || currentMode.value.id !== 'focus') return
+
+  isTaskDropdownOpen.value = !isTaskDropdownOpen.value
+}
+
+function handleTaskSelect(nextTaskIndex: number) {
   if (timerState.value !== 'idle') return
 
-  taskIndex.value = normalizeTaskIndex(taskIndex.value + 1)
+  taskIndex.value = normalizeTaskIndex(nextTaskIndex)
   persistCurrentTask()
+  isTaskDropdownOpen.value = false
+}
+
+function closeTaskDropdown() {
+  isTaskDropdownOpen.value = false
 }
 
 function startSession() {
   sessionStartedAtMs.value = Date.now()
+  animationNowMs.value = Date.now()
+  isTaskDropdownOpen.value = false
   if (selectedMode.value === 'focus') {
     persistCurrentTask()
   }
@@ -360,15 +441,18 @@ function startSession() {
 function pauseSession() {
   if (timerState.value !== 'running') return
 
+  animationNowMs.value = Date.now()
   accumulatedElapsedMs.value = syncRemainingTime()
   runningSinceMs.value = null
   timerState.value = 'paused'
   clearTickInterval()
+  clearAnimationFrame()
 }
 
 function resumeSession() {
   if (timerState.value !== 'paused') return
 
+  animationNowMs.value = Date.now()
   runningSinceMs.value = Date.now()
   timerState.value = 'running'
   startTicking()
@@ -382,7 +466,7 @@ function stopSession() {
 }
 
 function persistCurrentTask() {
-  focusStore.setLastUsedTaskIndex(taskIndex.value, demoTasks.length)
+  focusStore.setLastUsedTaskIndex(taskIndex.value, focusTaskTitles.value.length)
 }
 
 function openFocusDurationDialog() {
@@ -418,6 +502,27 @@ function consumeHomeEntryIntent() {
 
 const sessionSaveError = ref('')
 
+async function fetchCurrentStreak() {
+  if (!authStore.token) {
+    currentStreakDays.value = 0
+    return
+  }
+
+  isLoadingCurrentStreak.value = true
+
+  try {
+    const response = await apiRequest<StatsSummaryResponse>('/stats/summary', {
+      token: authStore.token,
+    })
+
+    currentStreakDays.value = response.data.currentStreakDays
+  } catch (error) {
+    console.error('Failed to load current streak', error)
+  } finally {
+    isLoadingCurrentStreak.value = false
+  }
+}
+
 async function persistCompletedSession(summary: SessionSummary) {
   if(!authStore.token || sessionStartedAtMs.value === null) return
 
@@ -438,6 +543,8 @@ async function persistCompletedSession(summary: SessionSummary) {
         endedAt: new Date().toISOString(),
       } satisfies CreateFocusSessionPayload)
      })
+
+     await fetchCurrentStreak()
   } catch (error) {
     sessionSaveError.value =
       error instanceof Error ? error.message : 'Failed to save focus session'
@@ -462,6 +569,11 @@ function goToStats() {
 
 onBeforeUnmount(() => {
   clearTickInterval()
+  clearAnimationFrame()
+})
+
+onMounted(() => {
+  void fetchCurrentStreak()
 })
 
 watch(
@@ -482,6 +594,15 @@ watch(
   },
   { immediate: true },
 )
+
+watch(
+  () => focusTaskTitles.value.length,
+  () => {
+    taskIndex.value = normalizeTaskIndex(taskIndex.value)
+    persistCurrentTask()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -495,49 +616,99 @@ watch(
           {{ headerText.title }}
         </h2>
         <p
-          v-if="headerText.subtitle"
-          class="text-[1.02rem] font-medium uppercase tracking-[0.16em] text-blue-500"
+          class="min-h-[1.6rem] text-[1.02rem] font-medium uppercase tracking-[0.16em] text-blue-500 transition-opacity duration-200"
+          :class="headerText.subtitle ? 'opacity-100' : 'opacity-0'"
         >
-          {{ headerText.subtitle }}
+          {{ headerText.subtitle || '\u00A0' }}
         </p>
       </header>
 
       <template v-if="timerState === 'idle'">
-        <Card
+        <div
           v-if="currentMode.id === 'focus'"
-          class="overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(59,130,246,0.28)]"
+          class="relative"
+          :class="isTaskDropdownOpen ? 'z-40' : ''"
         >
-          <CardContent class="flex items-center gap-4 p-5">
-            <div class="min-w-0 flex-1">
-              <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Working On
-              </p>
-              <h3 class="mt-3 text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-800">
-                {{ currentTask }}
-              </h3>
-            </div>
+          <Card
+            class="overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(59,130,246,0.28)]"
+          >
+            <CardContent class="flex items-center gap-4 p-5">
+              <div class="min-w-0 flex-1">
+                <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Working On
+                </p>
+                <h3 class="mt-3 text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-800">
+                  {{ currentTask }}
+                </h3>
+              </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              class="h-16 rounded-[1.15rem] bg-slate-100 px-5 text-base font-medium text-slate-600 hover:bg-slate-100/90"
-              @click="handleChangeTask"
+              <Button
+                type="button"
+                variant="ghost"
+                class="h-16 rounded-[1.15rem] bg-slate-100 px-5 text-base font-medium text-slate-600 hover:bg-slate-100/90"
+                @click="handleChangeTask"
+              >
+                Change
+                <ChevronRight
+                  class="size-4 transition-transform duration-200"
+                  :class="isTaskDropdownOpen ? 'rotate-90' : ''"
+                />
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Transition
+            enter-active-class="transition duration-220 ease-out"
+            enter-from-class="translate-y-2 scale-[0.98] opacity-0"
+            enter-to-class="translate-y-0 scale-100 opacity-100"
+            leave-active-class="transition duration-180 ease-in"
+            leave-from-class="translate-y-0 scale-100 opacity-100"
+            leave-to-class="translate-y-1 scale-[0.985] opacity-0"
+          >
+            <div
+              v-if="isTaskDropdownOpen"
+              class="absolute inset-x-0 top-[calc(100%-0.75rem)] z-40 overflow-hidden rounded-[1.65rem] border border-slate-200/80 bg-white px-3 pb-3 pt-5 shadow-[0_28px_80px_-30px_rgba(15,23,42,0.32)]"
             >
-              Change
-              <ChevronRight class="size-4" />
-            </Button>
-          </CardContent>
-        </Card>
+              <div class="space-y-1">
+                <p class="px-2 pb-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Select Task
+                </p>
+                <button
+                  v-for="task in focusTaskOptions"
+                  :key="`${task.index}-${task.title}`"
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-[1rem] px-3 py-3 text-left transition-colors"
+                  :class="
+                    task.isSelected
+                      ? 'bg-[#eef4ff] text-blue-600'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  "
+                  @click="handleTaskSelect(task.index)"
+                >
+                  <span class="min-w-0 flex-1 truncate text-sm font-semibold">
+                    {{ task.title }}
+                  </span>
+                  <span
+                    class="ml-3 flex size-5 shrink-0 items-center justify-center rounded-full"
+                    :class="task.isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 text-transparent'"
+                  >
+                    <Check class="size-3 stroke-[3]" />
+                  </span>
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </div>
 
         <div class="flex justify-center pt-2">
           <div
-            class="relative flex aspect-square w-full max-w-[19rem] items-center justify-center rounded-full border-[6px] border-blue-500 bg-white shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.22)]"
+            class="relative flex aspect-square w-full max-w-[16.25rem] items-center justify-center rounded-full border-[6px] border-blue-500 bg-white shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.22)]"
           >
             <div class="flex flex-col items-center text-center">
-              <div class="text-[4.7rem] font-light leading-none tracking-[-0.08em] text-slate-900">
+              <div class="text-[3.55rem] font-light leading-none tracking-[-0.08em] text-slate-900">
                 {{ timerPrimaryText }}
               </div>
-              <p class="mt-4 text-[1.05rem] font-medium tracking-[-0.02em] text-slate-400">
+              <p class="mt-3 text-[0.95rem] font-medium tracking-[-0.02em] text-slate-400">
                 Ready to start?
               </p>
             </div>
@@ -559,7 +730,7 @@ watch(
             :key="mode.id"
             type="button"
             variant="ghost"
-            class="flex h-auto min-h-[8.25rem] flex-col items-center justify-center gap-3 rounded-[1.55rem] border px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+            class="flex h-auto min-h-[6.15rem] flex-col items-center justify-center gap-1.5 rounded-[1.15rem] border px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
             :class="
               mode.id === selectedMode
                 ? 'border-blue-200 bg-blue-50 text-blue-500'
@@ -729,9 +900,15 @@ watch(
                 <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-orange-400">
                   Current Streak
                 </p>
-                <p class="mt-1 text-[2rem] font-semibold leading-none tracking-[-0.04em] text-orange-600">
-                  {{ CURRENT_STREAK_DAYS }} days
-                </p>
+                <div class="mt-1 flex items-center gap-2">
+                  <LoaderCircle
+                    v-if="isLoadingCurrentStreak || isSavingSession"
+                    class="size-5 animate-spin text-orange-400"
+                  />
+                  <p class="text-[2rem] font-semibold leading-none tracking-[-0.04em] text-orange-600">
+                    {{ currentStreakDays }} days
+                  </p>
+                </div>
               </div>
 
               <ChevronRight class="size-5 text-orange-400" />
@@ -847,5 +1024,21 @@ watch(
       :options="focusDurationDialogConfig.options"
       @select="updateFocusDuration"
     />
+    <Transition
+      enter-active-class="transition duration-220 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-180 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <button
+        v-if="isTaskDropdownOpen"
+        type="button"
+        class="fixed inset-0 z-30 bg-slate-900/36 backdrop-blur-[4px]"
+        aria-label="Close task dropdown"
+        @click="closeTaskDropdown"
+      />
+    </Transition>
   </AppShell>
 </template>

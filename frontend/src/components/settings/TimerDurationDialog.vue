@@ -56,7 +56,7 @@ const hasPresetMatch = computed(() => {
 })
 
 const customTotalSeconds = computed(() => {
-  const minutes = sanitizeNumber(customMinutes.value)
+  const minutes = Math.min(360, sanitizeNumber(customMinutes.value))
   const seconds = Math.min(59, sanitizeNumber(customSeconds.value))
 
   return minutes * 60 + seconds
@@ -96,7 +96,7 @@ function applyCustomDuration() {
   if (!canApplyCustom.value) return
 
   const normalizedSeconds = Math.min(59, sanitizeNumber(customSeconds.value))
-  const normalizedMinutes = sanitizeNumber(customMinutes.value)
+  const normalizedMinutes = Math.min(360, sanitizeNumber(customMinutes.value))
   const nextTotalSeconds = normalizedMinutes * 60 + normalizedSeconds
 
   customMinutes.value = `${normalizedMinutes}`
@@ -108,6 +108,22 @@ function sanitizeNumber(value: string) {
   const parsed = Number.parseInt(value, 10)
 
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
+function normalizedMinutesInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 3)
+
+  if(!digits) return ''
+
+  return String(Math.min(360, Number(digits)))
+}
+
+function normalizeSecondsInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 2)
+
+  if (!digits) return ''
+
+  return String(Math.min(59, Number(digits)))
 }
 </script>
 
@@ -228,16 +244,19 @@ function sanitizeNumber(value: string) {
                   Minutes
                 </label>
                 <Input
-                  v-model="customMinutes"
-                  type="number"
+                  :model-value="customMinutes"
+                  type="text"
+                  maxlength="3"
                   inputmode="numeric"
                   min="0"
+                  max="360"
                   class="h-11 rounded-xl text-center text-base font-semibold shadow-none transition-colors duration-300"
                   :class="
                     isDarkTheme
                       ? 'border-slate-600/80 bg-[#0F172A] text-white'
                       : 'border-slate-200/80 bg-white text-slate-900'
                   "
+                  @update:model-value="customMinutes = normalizedMinutesInput(String($event ?? ''))"
                 />
               </div>
 
@@ -249,8 +268,9 @@ function sanitizeNumber(value: string) {
                   Seconds
                 </label>
                 <Input
-                  v-model="customSeconds"
-                  type="number"
+                  :model-value="customSeconds"
+                  type="text"
+                  maxlength="2"
                   inputmode="numeric"
                   min="0"
                   max="59"
@@ -260,6 +280,7 @@ function sanitizeNumber(value: string) {
                       ? 'border-slate-600/80 bg-[#0F172A] text-white'
                       : 'border-slate-200/80 bg-white text-slate-900'
                   "
+                  @update:model-value="customSeconds = normalizeSecondsInput(String($event ?? ''))"
                 />
               </div>
             </div>

@@ -7,6 +7,6 @@ export const registerSchema = z.object({
 })
 
 export const loginSchema = z.object({
-    email: z.string().trim().toLowerCase().pipe(z.email("email must be valid")),
+    email: z.string().trim().toLowerCase().min(1, "email is required").pipe(z.email("email must be valid")),
     password: z.string().min(1, "password is required")
 })

@@ -21,8 +21,13 @@ const isSubmitting = ref(false)
 async function handleSubmit() {
   errorMessage.value = ''
 
+  if (password.value.length < 6) {
+    errorMessage.value = 'Password must be at least 6 characters'
+    return
+  }
+
   if (password.value !== confirmPassword.value) {
-    errorMessage.value = 'Password do not match'
+    errorMessage.value = 'Passwords do not match'
     return
   }
 
@@ -73,6 +78,7 @@ async function handleSubmit() {
               :type="isPasswordVisible ? 'text' : 'password'"
               placeholder="Create a password"
               autocomplete="new-password"
+              minlength="6"
               class="h-12 rounded-xl bg-white/80 pr-11"
             />
             <button

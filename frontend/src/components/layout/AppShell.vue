@@ -78,6 +78,8 @@ watch(
   },
   { immediate: true },
 )
+
+const isSettingRoute = computed(() => route.path === '/settings')
 </script>
 
 <template>
@@ -103,7 +105,7 @@ watch(
           <span>{{ homeStreakDays }} days</span>
         </div>
 
-        <div class="pointer-events-auto absolute right-4 top-4">
+        <div v-if="!isSettingRoute" class="pointer-events-auto absolute right-4 top-4">
           <Button
             type="button"
             variant="ghost"

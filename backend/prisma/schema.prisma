@@ -20,6 +20,7 @@ model User {
 
   tasks         Task[]
   focusSessions FocusSession[]
+  settings UserSettings?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -67,4 +68,27 @@ model FocusSession {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserSettings {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  themeMode String @default("light")
+
+  focusDurationSeconds Int @default(2100)
+  breakDurationSeconds Int @default(300)
+
+  focusRemindersEnabled  Boolean @default(true)
+  focusRemindersTime      String  @default("09:00")
+  focusRemindersEveryDay Boolean @default(false)
+  focusRemindersWeekdays Boolean @default(true)
+
+  dailySummaryEnabled Boolean @default(true)
+  dailySummaryTime    String  @default("20:00")
+
+  timezone String @default("Europe/Tallinn")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

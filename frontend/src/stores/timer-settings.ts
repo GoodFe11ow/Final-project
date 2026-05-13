@@ -30,6 +30,11 @@ export const useTimerSettingsStore = defineStore('timerSettings', {
     breakDurationSeconds: 5 * 60,
   }),
   actions: {
+    applySettings(focusDurationSeconds: number, breakDurationSeconds: number) {
+      this.focusDurationSeconds = normalizeDurationSeconds(focusDurationSeconds)
+      this.breakDurationSeconds = normalizeDurationSeconds(breakDurationSeconds)
+    },
+
     setDurationSeconds(settingKey: TimerSettingKey, totalSeconds: number) {
       const nextValue = normalizeDurationSeconds(totalSeconds)
 

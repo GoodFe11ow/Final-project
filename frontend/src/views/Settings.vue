@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import {
@@ -23,6 +23,7 @@ import {
   type TimerSettingKey,
 } from '@/stores/timer-settings'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingStore } from '@/stores/settings'
 
 type NotificationSettingKey = 'focus-reminders' | 'daily-summary'
 type SettingsThemeMode = 'light' | 'dark'
@@ -33,25 +34,13 @@ function hanldeLogout() {
   authStore.logout()
   router.push('/')
 }
+const settingsStore = useSettingStore()
 const timerSettingsStore = useTimerSettingsStore()
-const { breakDurationSeconds, focusDurationSeconds } = storeToRefs(timerSettingsStore)
+const { settings, isSaving: isSettingsSaving } = storeToRefs(settingsStore)
 
 const activeTimerSetting = ref<TimerSettingKey | null>(null)
 const focusRemindersOpen = ref(false)
 const dailySummaryOpen = ref(false)
-const settingsTheme = ref<SettingsThemeMode>('light')
-
-const focusReminderSettings = reactive({
-  enabled: true,
-  time: '09:00',
-  everyDay: false,
-  weekdays: true,
-})
-
-const dailySummarySettings = reactive({
-  enabled: true,
-  time: '20:00',
-})
 
 const timerSettings = computed(() => [
   {
@@ -59,14 +48,14 @@ const timerSettings = computed(() => [
     icon: Clock3,
     title: 'Focus',
     description: 'Deep work period',
-    value: formatDurationLabel(focusDurationSeconds.value),
+    value: formatDurationLabel(settings.value.focusDurationSeconds),
   },
   {
     key: 'break' as const,
     icon: Coffee,
     title: 'Break',
     description: 'Rest and recharge',
-    value: formatDurationLabel(breakDurationSeconds.value),
+    value: formatDurationLabel(settings.value.breakDurationSeconds),
   },
 ])
 
@@ -75,16 +64,16 @@ const notificationSettings = computed(() => [
     key: 'focus-reminders' as const,
     icon: BellRing,
     title: 'Focus reminders',
-    description: focusReminderSettings.enabled
-      ? `${formatTimeLabel(focusReminderSettings.time)} · ${focusReminderSettings.everyDay ? 'Every day' : focusReminderSettings.weekdays ? 'Weekdays' : 'Custom'}`
+    description: settings.value.focusRemindersEnabled
+      ? `${formatTimeLabel(settings.value.focusRemindersTime)} · ${settings.value.focusRemindersEveryDay ? 'Every day' : settings.value.focusRemindersWeekdays ? 'Weekdays' : 'Custom'}`
       : 'Off',
   },
   {
     key: 'daily-summary' as const,
     icon: FileText,
     title: 'Daily summary',
-    description: dailySummarySettings.enabled
-      ? formatTimeLabel(dailySummarySettings.time)
+    description: settings.value.dailySummaryEnabled
+      ? formatTimeLabel(settings.value.dailySummaryTime)
       : 'Off',
   },
 ])
@@ -98,7 +87,7 @@ const isDurationDialogOpen = computed({
   },
 })
 
-const isDarkTheme = computed(() => settingsTheme.value === 'dark')
+const isDarkTheme = computed(() => settings.value.themeMode === 'dark')
 
 const pageSurfaceClass = computed(() =>
   isDarkTheme.value
@@ -167,7 +156,7 @@ const durationDialogConfig = computed(() => {
     return {
       title: 'Break Duration',
       description: 'Choose how long each recovery break should last.',
-      selectedValue: breakDurationSeconds.value,
+      selectedValue: settings.value.breakDurationSeconds,
       options: [5 * 60, 10 * 60, 15 * 60, 20 * 60],
     }
   }
@@ -175,7 +164,7 @@ const durationDialogConfig = computed(() => {
   return {
     title: 'Focus Duration',
     description: 'Choose your default deep work session length.',
-    selectedValue: focusDurationSeconds.value,
+    selectedValue: settings.value.focusDurationSeconds,
     options: [25 * 60, 30 * 60, 35 * 60, 45 * 60, 50 * 60, 60 * 60],
   }
 })
@@ -184,8 +173,14 @@ function openTimerDuration(settingKey: TimerSettingKey) {
   activeTimerSetting.value = settingKey
 }
 
-function updateTimerDuration(nextValue: number) {
+async function updateTimerDuration(nextValue: number) {
   if (!activeTimerSetting.value) return
+
+  await settingsStore.updateSettings({
+    [activeTimerSetting.value === 'focus'
+      ? 'focusDurationSeconds'
+      : 'breakDurationSeconds']: nextValue,
+  })
 
   timerSettingsStore.setDurationSeconds(activeTimerSetting.value, nextValue)
 }
@@ -199,24 +194,28 @@ function openNotificationSetting(settingKey: NotificationSettingKey) {
   dailySummaryOpen.value = true
 }
 
-function saveFocusReminderSettings(nextValue: {
+async function saveFocusReminderSettings(nextValue: {
   enabled: boolean
   time: string
   everyDay?: boolean
   weekdays?: boolean
 }) {
-  focusReminderSettings.enabled = nextValue.enabled
-  focusReminderSettings.time = nextValue.time
-  focusReminderSettings.everyDay = nextValue.everyDay ?? false
-  focusReminderSettings.weekdays = nextValue.weekdays ?? false
+  await settingsStore.updateSettings({
+    focusRemindersEnabled: nextValue.enabled,
+    focusRemindersTime: nextValue.time,
+    focusRemindersEveryDay: nextValue.everyDay ?? false,
+    focusRemindersWeekdays: nextValue.weekdays ?? false,
+  })
 }
 
-function saveDailySummarySettings(nextValue: {
+async function saveDailySummarySettings(nextValue: {
   enabled: boolean
   time: string
 }) {
-  dailySummarySettings.enabled = nextValue.enabled
-  dailySummarySettings.time = nextValue.time
+  await settingsStore.updateSettings({
+    dailySummaryEnabled: nextValue.enabled,
+    dailySummaryTime: nextValue.time,
+  })
 }
 
 function formatTimeLabel(timeValue: string) {
@@ -238,12 +237,16 @@ function formatTimeLabel(timeValue: string) {
   }).format(date)
 }
 
-function setSettingsTheme(nextTheme: SettingsThemeMode) {
-  settingsTheme.value = nextTheme
+async function setSettingsTheme(nextTheme: SettingsThemeMode) {
+  if (settings.value.themeMode === nextTheme) return
+
+  await settingsStore.updateSettings({
+    themeMode: nextTheme,
+  })
 }
 
 function getThemeToggleButtonClass(themeMode: SettingsThemeMode) {
-  const isActive = settingsTheme.value === themeMode
+  const isActive = settings.value.themeMode === themeMode
 
   if (isDarkTheme.value) {
     return isActive
@@ -380,6 +383,7 @@ function getThemeToggleButtonClass(themeMode: SettingsThemeMode) {
               <button
                 type="button"
                 :class="getThemeToggleButtonClass('light')"
+                :disabled="isSettingsSaving"
                 @click="setSettingsTheme('light')"
               >
                 Light
@@ -387,6 +391,7 @@ function getThemeToggleButtonClass(themeMode: SettingsThemeMode) {
               <button
                 type="button"
                 :class="getThemeToggleButtonClass('dark')"
+                :disabled="isSettingsSaving"
                 @click="setSettingsTheme('dark')"
               >
                 Dark
@@ -415,7 +420,7 @@ function getThemeToggleButtonClass(themeMode: SettingsThemeMode) {
 
       <TimerDurationDialog
         v-model:open="isDurationDialogOpen"
-        :theme="settingsTheme"
+        :theme="settings.themeMode"
         :title="durationDialogConfig.title"
         :description="durationDialogConfig.description"
         :selected-value="durationDialogConfig.selectedValue"
@@ -425,22 +430,30 @@ function getThemeToggleButtonClass(themeMode: SettingsThemeMode) {
 
       <NotificationSettingsDialog
         v-model:open="focusRemindersOpen"
-        :theme="settingsTheme"
+        :theme="settings.themeMode"
         title="Focus Reminders"
         enabled-label="Enable Reminders"
         enabled-description="Stay on track with daily notifications"
-        :value="focusReminderSettings"
+        :value="{
+          enabled: settings.focusRemindersEnabled,
+          time: settings.focusRemindersTime,
+          everyDay: settings.focusRemindersEveryDay,
+          weekdays: settings.focusRemindersWeekdays,
+        }"
         show-frequency
         @save="saveFocusReminderSettings"
       />
 
       <NotificationSettingsDialog
         v-model:open="dailySummaryOpen"
-        :theme="settingsTheme"
+        :theme="settings.themeMode"
         title="Daily Summary"
         enabled-label="Enable Summary"
         enabled-description="Get a notification at the end of your day."
-        :value="dailySummarySettings"
+        :value="{
+          enabled: settings.dailySummaryEnabled,
+          time: settings.dailySummaryTime,
+        }"
         time-hint="Scheduled delivery"
         @save="saveDailySummarySettings"
       />

@@ -6,6 +6,7 @@ import { pinia } from './stores'
 import { registerSW } from 'virtual:pwa-register'
 import { useAuthStore } from './stores/auth'
 import { useTasksStore } from './stores/tasks'
+import { useSettingStore } from './stores/settings'
 
 async function bootstrap() {
 const app = createApp(App)
@@ -17,6 +18,9 @@ await authStore.fetchMe()
 
 const tasksStore = useTasksStore(pinia)
 void tasksStore.ensureTasksLoaded()
+
+const settingsStore = useSettingStore(pinia)
+void settingsStore.ensureSettingsLoaded()
 
 app.use(router)
 app.mount('#app')

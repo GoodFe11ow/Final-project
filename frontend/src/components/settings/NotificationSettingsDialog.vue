@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
-import { ChevronUp, ChevronDown, Clock3, X } from 'lucide-vue-next'
+import { Clock3, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
+import TimeStepper from '@/components/settings/TimeStepper.vue'
 
 type NotificationSettingsValue = {
   enabled: boolean
@@ -112,7 +113,7 @@ function parseTimeValue(timeValue: string) {
   const [hoursRaw, minutesRaw] = timeValue.split(':')
   const safeHour24 = clampNumber(Number.parseInt(hoursRaw, 10), 0, 23)
   const safeMinutes = clampNumber(Number.parseInt(minutesRaw, 10), 0, 59)
-  const meridiem = safeHour24 >= 12 ? 'PM' : 'AM'
+  const meridiem: 'AM' | 'PM' = safeHour24 >= 12 ? 'PM' : 'AM'
   const hour12 = safeHour24 % 12 === 0 ? 12 : safeHour24 % 12
 
   return {
@@ -176,104 +177,31 @@ function clampNumber(value: number, min: number, max: number) {
               Select Time
             </p>
 
-            <div class="flex items-center gap-3 rounded-[1rem] px-4 py-3 transition-colors duration-300"
+            <div class="flex items-center gap-2 rounded-[0.9rem] px-3 py-2 transition-colors duration-300"
               :class="isDarkTheme ? 'bg-[#1E293B]' : 'bg-[#f4f6ff]'">
-              <Clock3 class="size-5 shrink-0 text-blue-500" />
+              <Clock3 class="size-4 shrink-0 text-blue-500" />
 
               <div class="min-w-0 flex-1">
-                <p class="text-[1.02rem] font-semibold tracking-[-0.02em]"
+                <p class="text-sm font-semibold tracking-[-0.02em]"
                   :class="isDarkTheme ? 'text-white' : 'text-slate-700'">
                   {{ formatDisplayTime(draft.time) }}
                 </p>
               </div>
             </div>
 
-            <div
-              class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-[1rem] border p-3 transition-colors duration-300"
-              :class="isDarkTheme
-                ? 'border-slate-600/80 bg-[#334155]'
-                : 'border-slate-200/80 bg-white'
-                ">
-              <div class="space-y-2 text-center">
-                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.14em]"
-                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-400'">
-                  Hour
-                </p>
-                <Button type="button" variant="ghost" size="icon-sm" class="mx-auto rounded-full transition-colors"
-                  :class="isDarkTheme
-                    ? 'text-slate-200 hover:bg-[#1E293B]'
-                    : 'text-slate-500 hover:bg-slate-100'
-                    " @click="stepHours(1)">
-                  <ChevronUp class="size-4" />
-                </Button>
-                <div class="text-[1.35rem] font-semibold tracking-[-0.04em]"
-                  :class="isDarkTheme ? 'text-white' : 'text-slate-800'">
-                  {{ hourLabel }}
-                </div>
-                <Button type="button" variant="ghost" size="icon-sm" class="mx-auto rounded-full transition-colors"
-                  :class="isDarkTheme
-                    ? 'text-slate-200 hover:bg-[#1E293B]'
-                    : 'text-slate-500 hover:bg-slate-100'
-                    " @click="stepHours(-1)">
-                  <ChevronDown class="size-4" />
-                </Button>
-              </div>
-
-              <div class="pt-6 text-[1.35rem] font-semibold" :class="isDarkTheme ? 'text-slate-500' : 'text-slate-300'">
-                :
-              </div>
-
-              <div class="space-y-2 text-center">
-                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.14em]"
-                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-400'">
-                  Minute
-                </p>
-                <Button type="button" variant="ghost" size="icon-sm" class="mx-auto rounded-full transition-colors"
-                  :class="isDarkTheme
-                    ? 'text-slate-200 hover:bg-[#1E293B]'
-                    : 'text-slate-500 hover:bg-slate-100'
-                    " @click="stepMinutes(1)">
-                  <ChevronUp class="size-4" />
-                </Button>
-                <div class="text-[1.35rem] font-semibold tracking-[-0.04em]"
-                  :class="isDarkTheme ? 'text-white' : 'text-slate-800'">
-                  {{ minuteLabel }}
-                </div>
-                <Button type="button" variant="ghost" size="icon-sm" class="mx-auto rounded-full transition-colors"
-                  :class="isDarkTheme
-                    ? 'text-slate-200 hover:bg-[#1E293B]'
-                    : 'text-slate-500 hover:bg-slate-100'
-                    " @click="stepMinutes(-1)">
-                  <ChevronDown class="size-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div class="flex items-center rounded-full p-1 transition-colors duration-300"
-              :class="isDarkTheme ? 'bg-[#1E293B]' : 'bg-[#eef2ff]'">
-              <button type="button" class="flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors"
-                :class="timeParts.meridiem === 'AM'
-                  ? isDarkTheme
-                    ? 'bg-[#334155] text-blue-400 shadow-sm'
-                    : 'bg-white text-blue-500 shadow-sm'
-                  : isDarkTheme
-                    ? 'text-slate-300'
-                    : 'text-slate-500'
-                  " @click="setMeridiem('AM')">
-                AM
-              </button>
-              <button type="button" class="flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors"
-                :class="timeParts.meridiem === 'PM'
-                  ? isDarkTheme
-                    ? 'bg-[#334155] text-blue-400 shadow-sm'
-                    : 'bg-white text-blue-500 shadow-sm'
-                  : isDarkTheme
-                    ? 'text-slate-300'
-                    : 'text-slate-500'
-                  " @click="setMeridiem('PM')">
-                PM
-              </button>
-            </div>
+            <TimeStepper
+              left-label="Hour"
+              right-label="Minute"
+              :left-value="hourLabel"
+              :right-value="minuteLabel"
+              :meridiem="timeParts.meridiem"
+              :theme="theme"
+              @increase-left="stepHours(1)"
+              @decrease-left="stepHours(-1)"
+              @increase-right="stepMinutes(1)"
+              @decrease-right="stepMinutes(-1)"
+              @set-meridiem="setMeridiem"
+            />
 
             <p v-if="timeHint" class="pl-1 text-sm" :class="isDarkTheme ? 'text-slate-400' : 'text-slate-400'">
               {{ timeHint }}

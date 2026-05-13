@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Check, X } from 'lucide-vue-next'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import TimeStepper from '@/components/settings/TimeStepper.vue'
 import {
   formatDurationLabel,
   splitDurationSeconds,
@@ -64,6 +64,8 @@ const customTotalSeconds = computed(() => {
 
 const canApplyCustom = computed(() => customTotalSeconds.value > 0)
 const isDarkTheme = computed(() => props.theme === 'dark')
+const customMinuteLabel = computed(() => String(Math.min(360, sanitizeNumber(customMinutes.value))).padStart(2, '0'))
+const customSecondLabel = computed(() => String(Math.min(59, sanitizeNumber(customSeconds.value))).padStart(2, '0'))
 
 watch(
   () => [props.open, props.selectedValue, normalizedOptions.value.length] as const,
@@ -104,26 +106,28 @@ function applyCustomDuration() {
   selectDuration(nextTotalSeconds)
 }
 
+function stepCustomMinutes(direction: 1 | -1) {
+  const nextMinutes = clampNumber(sanitizeNumber(customMinutes.value) + direction, 0, 360)
+
+  customMinutes.value = `${nextMinutes}`
+}
+
+function stepCustomSeconds(direction: 1 | -1) {
+  const nextSeconds = clampNumber(sanitizeNumber(customSeconds.value) + direction, 0, 59)
+
+  customSeconds.value = String(nextSeconds).padStart(2, '0')
+}
+
 function sanitizeNumber(value: string) {
   const parsed = Number.parseInt(value, 10)
 
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
 }
 
-function normalizedMinutesInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 3)
+function clampNumber(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) return min
 
-  if(!digits) return ''
-
-  return String(Math.min(360, Number(digits)))
-}
-
-function normalizeSecondsInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 2)
-
-  if (!digits) return ''
-
-  return String(Math.min(59, Number(digits)))
+  return Math.min(max, Math.max(min, value))
 }
 </script>
 
@@ -235,55 +239,17 @@ function normalizeSecondsInput(value: string) {
                 : 'border-slate-200/80 bg-[#f8faff]'
             "
           >
-            <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-2">
-                <label
-                  class="text-xs font-semibold uppercase tracking-[0.12em]"
-                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-500'"
-                >
-                  Minutes
-                </label>
-                <Input
-                  :model-value="customMinutes"
-                  type="text"
-                  maxlength="3"
-                  inputmode="numeric"
-                  min="0"
-                  max="360"
-                  class="h-11 rounded-xl text-center text-base font-semibold shadow-none transition-colors duration-300"
-                  :class="
-                    isDarkTheme
-                      ? 'border-slate-600/80 bg-[#0F172A] text-white'
-                      : 'border-slate-200/80 bg-white text-slate-900'
-                  "
-                  @update:model-value="customMinutes = normalizedMinutesInput(String($event ?? ''))"
-                />
-              </div>
-
-              <div class="space-y-2">
-                <label
-                  class="text-xs font-semibold uppercase tracking-[0.12em]"
-                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-500'"
-                >
-                  Seconds
-                </label>
-                <Input
-                  :model-value="customSeconds"
-                  type="text"
-                  maxlength="2"
-                  inputmode="numeric"
-                  min="0"
-                  max="59"
-                  class="h-11 rounded-xl text-center text-base font-semibold shadow-none transition-colors duration-300"
-                  :class="
-                    isDarkTheme
-                      ? 'border-slate-600/80 bg-[#0F172A] text-white'
-                      : 'border-slate-200/80 bg-white text-slate-900'
-                  "
-                  @update:model-value="customSeconds = normalizeSecondsInput(String($event ?? ''))"
-                />
-              </div>
-            </div>
+            <TimeStepper
+              left-label="Minutes"
+              right-label="Seconds"
+              :left-value="customMinuteLabel"
+              :right-value="customSecondLabel"
+              :theme="theme"
+              @increase-left="stepCustomMinutes(1)"
+              @decrease-left="stepCustomMinutes(-1)"
+              @increase-right="stepCustomSeconds(1)"
+              @decrease-right="stepCustomSeconds(-1)"
+            />
 
             <Button
               type="button"

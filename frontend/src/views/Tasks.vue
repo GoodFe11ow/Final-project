@@ -303,34 +303,36 @@ watch(
         </div>
 
         <div v-else class="flex flex-1 flex-col gap-4">
-          <button v-for="task in sortedTasks" :key="task.id" type="button" class="text-left"
-            @click="openTaskDetails(task.id)">
-            <Card
-              class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
-              :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
-              <CardContent class="p-4">
-                <div class="flex items-start justify-between gap-3">
-                  <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
-                    :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
-                    {{ task.title }}
-                  </h3>
+          <div class="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
+            <button v-for="task in sortedTasks" :key="task.id" type="button" class="w-full text-left"
+              @click="openTaskDetails(task.id)">
+              <Card
+                class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
+                :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
+                <CardContent class="p-4">
+                  <div class="flex items-start justify-between gap-3">
+                    <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
+                      :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
+                      {{ task.title }}
+                    </h3>
 
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-semibold" :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
-                      {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
-                    </span>
-                    <span v-if="task.completed"
-                      class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
-                      <Check class="size-3.5 stroke-[3]" />
-                    </span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-semibold" :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
+                        {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
+                      </span>
+                      <span v-if="task.completed"
+                        class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
+                        <Check class="size-3.5 stroke-[3]" />
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
-                  :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
-              </CardContent>
-            </Card>
-          </button>
+                  <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
+                    :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
+                </CardContent>
+              </Card>
+            </button>
+          </div>
 
           <div class="mt-auto flex justify-center pt-4">
             <Button type="button"

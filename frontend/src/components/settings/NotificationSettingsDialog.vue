@@ -55,6 +55,14 @@ watch(
     draft.time = props.value.time
     draft.everyDay = props.value.everyDay ?? false
     draft.weekdays = props.value.weekdays ?? false
+
+    if (draft.everyDay && draft.weekdays) {
+      draft.weekdays = false
+    }
+
+    if (!draft.everyDay && !draft.weekdays) {
+      draft.weekdays = true
+    }
   },
   { immediate: true },
 )
@@ -133,6 +141,16 @@ function clampNumber(value: number, min: number, max: number) {
 
   return Math.min(max, Math.max(min, value))
 }
+
+function selectEveryDay() {
+  draft.everyDay = true
+  draft.weekdays = false
+}
+
+function selectWeekdays() {
+  draft.weekdays = true
+  draft.everyDay = false
+}
 </script>
 
 <template>
@@ -153,7 +171,7 @@ function clampNumber(value: number, min: number, max: number) {
             :class="isDarkTheme ? 'text-white' : 'text-slate-900'">
             {{ title }}
           </DialogTitle>
-          
+
           <span class="inline-block h-8 w-8" aria-hidden="true" />
         </div>
 
@@ -189,19 +207,9 @@ function clampNumber(value: number, min: number, max: number) {
               </div>
             </div>
 
-            <TimeStepper
-              left-label="Hour"
-              right-label="Minute"
-              :left-value="hourLabel"
-              :right-value="minuteLabel"
-              :meridiem="timeParts.meridiem"
-              :theme="theme"
-              @increase-left="stepHours(1)"
-              @decrease-left="stepHours(-1)"
-              @increase-right="stepMinutes(1)"
-              @decrease-right="stepMinutes(-1)"
-              @set-meridiem="setMeridiem"
-            />
+            <TimeStepper left-label="Hour" right-label="Minute" :left-value="hourLabel" :right-value="minuteLabel"
+              :meridiem="timeParts.meridiem" :theme="theme" @increase-left="stepHours(1)" @decrease-left="stepHours(-1)"
+              @increase-right="stepMinutes(1)" @decrease-right="stepMinutes(-1)" @set-meridiem="setMeridiem" />
 
             <p v-if="timeHint" class="pl-1 text-sm" :class="isDarkTheme ? 'text-slate-400' : 'text-slate-400'">
               {{ timeHint }}
@@ -214,7 +222,7 @@ function clampNumber(value: number, min: number, max: number) {
             </p>
 
             <label class="flex items-center gap-3">
-              <Checkbox v-model:model-value="draft.everyDay" />
+              <Checkbox :model-value="draft.everyDay" @update:model-value="selectEveryDay()" />
               <span class="text-[1.02rem] font-semibold tracking-[-0.02em]"
                 :class="isDarkTheme ? 'text-white' : 'text-slate-700'">
                 Every day
@@ -222,7 +230,7 @@ function clampNumber(value: number, min: number, max: number) {
             </label>
 
             <label class="flex items-center gap-3">
-              <Checkbox v-model:model-value="draft.weekdays" />
+              <Checkbox :model-value="draft.weekdays" @update:model-value="selectWeekdays()" />
               <span class="text-[1.02rem] font-semibold tracking-[-0.02em]"
                 :class="isDarkTheme ? 'text-white' : 'text-slate-700'">
                 Weekdays

@@ -136,51 +136,34 @@ function clampNumber(value: number, min: number, max: number) {
 
 <template>
   <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent
-      class="max-w-[21rem] overflow-hidden rounded-[1.9rem] p-0 transition-colors duration-300"
-      :class="isDarkTheme ? 'border-slate-700/80' : 'border-slate-200/80'"
-    >
+    <DialogContent class="max-w-[21rem] overflow-hidden rounded-[1.9rem] p-0 transition-colors duration-300"
+      :class="isDarkTheme ? 'border-slate-700/80' : 'border-slate-200/80'">
       <div :class="isDarkTheme ? 'bg-[#0F172A]' : 'bg-white'">
-        <div
-          class="flex items-center justify-between border-b px-5 py-4 transition-colors duration-300"
-          :class="isDarkTheme ? 'border-slate-700/80' : 'border-slate-100'"
-        >
-          <DialogTitle
-            class="text-[1.65rem] font-semibold tracking-[-0.04em]"
-            :class="isDarkTheme ? 'text-white' : 'text-slate-900'"
-          >
-            {{ title }}
-          </DialogTitle>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            class="rounded-full transition-colors"
-            :class="
-              isDarkTheme
-                ? 'text-slate-300 hover:bg-[#1E293B]'
-                : 'text-slate-500 hover:bg-slate-100'
-            "
-            @click="closeDialog"
-          >
+        <div class="flex items-center justify-between border-b px-5 py-4 transition-colors duration-300"
+          :class="isDarkTheme ? 'border-slate-700/80' : 'border-slate-100'">
+          <Button type="button" variant="ghost" size="icon-sm" class="rounded-full transition-colors" :class="isDarkTheme
+            ? 'text-slate-300 hover:bg-[#1E293B]'
+            : 'text-slate-500 hover:bg-slate-100'
+            " @click="closeDialog">
             <X class="size-5" />
           </Button>
+
+          <DialogTitle class="text-[1.65rem] font-semibold tracking-[-0.04em]"
+            :class="isDarkTheme ? 'text-white' : 'text-slate-900'">
+            {{ title }}
+          </DialogTitle>
+          
+          <span class="inline-block h-8 w-8" aria-hidden="true" />
         </div>
 
         <div class="space-y-8 px-5 py-6">
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0 flex-1">
-              <p
-                class="text-[1.02rem] font-semibold tracking-[-0.02em]"
-                :class="isDarkTheme ? 'text-white' : 'text-slate-800'"
-              >
+              <p class="text-[1.02rem] font-semibold tracking-[-0.02em]"
+                :class="isDarkTheme ? 'text-white' : 'text-slate-800'">
                 {{ enabledLabel }}
               </p>
-              <p
-                class="mt-1 text-sm leading-6"
-                :class="isDarkTheme ? 'text-slate-300' : 'text-slate-400'"
-              >
+              <p class="mt-1 text-sm leading-6" :class="isDarkTheme ? 'text-slate-300' : 'text-slate-400'">
                 {{ enabledDescription }}
               </p>
             </div>
@@ -193,17 +176,13 @@ function clampNumber(value: number, min: number, max: number) {
               Select Time
             </p>
 
-            <div
-              class="flex items-center gap-3 rounded-[1rem] px-4 py-3 transition-colors duration-300"
-              :class="isDarkTheme ? 'bg-[#1E293B]' : 'bg-[#f4f6ff]'"
-            >
+            <div class="flex items-center gap-3 rounded-[1rem] px-4 py-3 transition-colors duration-300"
+              :class="isDarkTheme ? 'bg-[#1E293B]' : 'bg-[#f4f6ff]'">
               <Clock3 class="size-5 shrink-0 text-blue-500" />
 
               <div class="min-w-0 flex-1">
-                <p
-                  class="text-[1.02rem] font-semibold tracking-[-0.02em]"
-                  :class="isDarkTheme ? 'text-white' : 'text-slate-700'"
-                >
+                <p class="text-[1.02rem] font-semibold tracking-[-0.02em]"
+                  :class="isDarkTheme ? 'text-white' : 'text-slate-700'">
                   {{ formatDisplayTime(draft.time) }}
                 </p>
               </div>
@@ -211,149 +190,92 @@ function clampNumber(value: number, min: number, max: number) {
 
             <div
               class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-[1rem] border p-3 transition-colors duration-300"
-              :class="
-                isDarkTheme
-                  ? 'border-slate-600/80 bg-[#334155]'
-                  : 'border-slate-200/80 bg-white'
-              "
-            >
+              :class="isDarkTheme
+                ? 'border-slate-600/80 bg-[#334155]'
+                : 'border-slate-200/80 bg-white'
+                ">
               <div class="space-y-2 text-center">
-                <p
-                  class="text-[0.7rem] font-semibold uppercase tracking-[0.14em]"
-                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-400'"
-                >
+                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.14em]"
+                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-400'">
                   Hour
                 </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="mx-auto rounded-full transition-colors"
-                  :class="
-                    isDarkTheme
-                      ? 'text-slate-200 hover:bg-[#1E293B]'
-                      : 'text-slate-500 hover:bg-slate-100'
-                  "
-                  @click="stepHours(1)"
-                >
+                <Button type="button" variant="ghost" size="icon-sm" class="mx-auto rounded-full transition-colors"
+                  :class="isDarkTheme
+                    ? 'text-slate-200 hover:bg-[#1E293B]'
+                    : 'text-slate-500 hover:bg-slate-100'
+                    " @click="stepHours(1)">
                   <ChevronUp class="size-4" />
                 </Button>
-                <div
-                  class="text-[1.35rem] font-semibold tracking-[-0.04em]"
-                  :class="isDarkTheme ? 'text-white' : 'text-slate-800'"
-                >
+                <div class="text-[1.35rem] font-semibold tracking-[-0.04em]"
+                  :class="isDarkTheme ? 'text-white' : 'text-slate-800'">
                   {{ hourLabel }}
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="mx-auto rounded-full transition-colors"
-                  :class="
-                    isDarkTheme
-                      ? 'text-slate-200 hover:bg-[#1E293B]'
-                      : 'text-slate-500 hover:bg-slate-100'
-                  "
-                  @click="stepHours(-1)"
-                >
+                <Button type="button" variant="ghost" size="icon-sm" class="mx-auto rounded-full transition-colors"
+                  :class="isDarkTheme
+                    ? 'text-slate-200 hover:bg-[#1E293B]'
+                    : 'text-slate-500 hover:bg-slate-100'
+                    " @click="stepHours(-1)">
                   <ChevronDown class="size-4" />
                 </Button>
               </div>
 
-              <div
-                class="pt-6 text-[1.35rem] font-semibold"
-                :class="isDarkTheme ? 'text-slate-500' : 'text-slate-300'"
-              >
+              <div class="pt-6 text-[1.35rem] font-semibold" :class="isDarkTheme ? 'text-slate-500' : 'text-slate-300'">
                 :
               </div>
 
               <div class="space-y-2 text-center">
-                <p
-                  class="text-[0.7rem] font-semibold uppercase tracking-[0.14em]"
-                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-400'"
-                >
+                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.14em]"
+                  :class="isDarkTheme ? 'text-slate-300' : 'text-slate-400'">
                   Minute
                 </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="mx-auto rounded-full transition-colors"
-                  :class="
-                    isDarkTheme
-                      ? 'text-slate-200 hover:bg-[#1E293B]'
-                      : 'text-slate-500 hover:bg-slate-100'
-                  "
-                  @click="stepMinutes(1)"
-                >
+                <Button type="button" variant="ghost" size="icon-sm" class="mx-auto rounded-full transition-colors"
+                  :class="isDarkTheme
+                    ? 'text-slate-200 hover:bg-[#1E293B]'
+                    : 'text-slate-500 hover:bg-slate-100'
+                    " @click="stepMinutes(1)">
                   <ChevronUp class="size-4" />
                 </Button>
-                <div
-                  class="text-[1.35rem] font-semibold tracking-[-0.04em]"
-                  :class="isDarkTheme ? 'text-white' : 'text-slate-800'"
-                >
+                <div class="text-[1.35rem] font-semibold tracking-[-0.04em]"
+                  :class="isDarkTheme ? 'text-white' : 'text-slate-800'">
                   {{ minuteLabel }}
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="mx-auto rounded-full transition-colors"
-                  :class="
-                    isDarkTheme
-                      ? 'text-slate-200 hover:bg-[#1E293B]'
-                      : 'text-slate-500 hover:bg-slate-100'
-                  "
-                  @click="stepMinutes(-1)"
-                >
+                <Button type="button" variant="ghost" size="icon-sm" class="mx-auto rounded-full transition-colors"
+                  :class="isDarkTheme
+                    ? 'text-slate-200 hover:bg-[#1E293B]'
+                    : 'text-slate-500 hover:bg-slate-100'
+                    " @click="stepMinutes(-1)">
                   <ChevronDown class="size-4" />
                 </Button>
               </div>
             </div>
 
-            <div
-              class="flex items-center rounded-full p-1 transition-colors duration-300"
-              :class="isDarkTheme ? 'bg-[#1E293B]' : 'bg-[#eef2ff]'"
-            >
-              <button
-                type="button"
-                class="flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors"
-                :class="
-                  timeParts.meridiem === 'AM'
-                    ? isDarkTheme
-                      ? 'bg-[#334155] text-blue-400 shadow-sm'
-                      : 'bg-white text-blue-500 shadow-sm'
-                    : isDarkTheme
-                      ? 'text-slate-300'
-                      : 'text-slate-500'
-                "
-                @click="setMeridiem('AM')"
-              >
+            <div class="flex items-center rounded-full p-1 transition-colors duration-300"
+              :class="isDarkTheme ? 'bg-[#1E293B]' : 'bg-[#eef2ff]'">
+              <button type="button" class="flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors"
+                :class="timeParts.meridiem === 'AM'
+                  ? isDarkTheme
+                    ? 'bg-[#334155] text-blue-400 shadow-sm'
+                    : 'bg-white text-blue-500 shadow-sm'
+                  : isDarkTheme
+                    ? 'text-slate-300'
+                    : 'text-slate-500'
+                  " @click="setMeridiem('AM')">
                 AM
               </button>
-              <button
-                type="button"
-                class="flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors"
-                :class="
-                  timeParts.meridiem === 'PM'
-                    ? isDarkTheme
-                      ? 'bg-[#334155] text-blue-400 shadow-sm'
-                      : 'bg-white text-blue-500 shadow-sm'
-                    : isDarkTheme
-                      ? 'text-slate-300'
-                      : 'text-slate-500'
-                "
-                @click="setMeridiem('PM')"
-              >
+              <button type="button" class="flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-colors"
+                :class="timeParts.meridiem === 'PM'
+                  ? isDarkTheme
+                    ? 'bg-[#334155] text-blue-400 shadow-sm'
+                    : 'bg-white text-blue-500 shadow-sm'
+                  : isDarkTheme
+                    ? 'text-slate-300'
+                    : 'text-slate-500'
+                  " @click="setMeridiem('PM')">
                 PM
               </button>
             </div>
 
-            <p
-              v-if="timeHint"
-              class="pl-1 text-sm"
-              :class="isDarkTheme ? 'text-slate-400' : 'text-slate-400'"
-            >
+            <p v-if="timeHint" class="pl-1 text-sm" :class="isDarkTheme ? 'text-slate-400' : 'text-slate-400'">
               {{ timeHint }}
             </p>
           </div>
@@ -365,44 +287,33 @@ function clampNumber(value: number, min: number, max: number) {
 
             <label class="flex items-center gap-3">
               <Checkbox v-model:model-value="draft.everyDay" />
-              <span
-                class="text-[1.02rem] font-semibold tracking-[-0.02em]"
-                :class="isDarkTheme ? 'text-white' : 'text-slate-700'"
-              >
+              <span class="text-[1.02rem] font-semibold tracking-[-0.02em]"
+                :class="isDarkTheme ? 'text-white' : 'text-slate-700'">
                 Every day
               </span>
             </label>
 
             <label class="flex items-center gap-3">
               <Checkbox v-model:model-value="draft.weekdays" />
-              <span
-                class="text-[1.02rem] font-semibold tracking-[-0.02em]"
-                :class="isDarkTheme ? 'text-white' : 'text-slate-700'"
-              >
+              <span class="text-[1.02rem] font-semibold tracking-[-0.02em]"
+                :class="isDarkTheme ? 'text-white' : 'text-slate-700'">
                 Weekdays
               </span>
             </label>
           </div>
         </div>
 
-        <div
-          class="flex items-center justify-end gap-3 px-5 py-4 transition-colors duration-300"
-          :class="isDarkTheme ? 'bg-[#1E293B]' : 'bg-[#f5f7ff]'"
-        >
-          <Button
-            type="button"
-            variant="ghost"
+        <div class="flex items-center justify-end gap-3 px-5 py-4 transition-colors duration-300"
+          :class="isDarkTheme ? 'bg-[#1E293B]' : 'bg-[#f5f7ff]'">
+          <Button type="button" variant="ghost"
             class="px-3 text-base font-semibold text-blue-500 hover:bg-transparent hover:text-blue-600"
-            @click="closeDialog"
-          >
+            @click="closeDialog">
             Cancel
           </Button>
 
-          <Button
-            type="button"
+          <Button type="button"
             class="h-11 rounded-xl bg-blue-500 px-6 text-base font-semibold shadow-[0_18px_32px_-18px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-            @click="saveChanges"
-          >
+            @click="saveChanges">
             Save
           </Button>
         </div>

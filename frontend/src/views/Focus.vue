@@ -6,7 +6,6 @@ import AppShell from '@/components/layout/AppShell.vue'
 import TimerDurationDialog from '@/components/settings/TimerDurationDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useTimerSettingsStore } from '@/stores/timer-settings'
 import { useFocusStore } from '@/stores/focus'
 import {
   Check,
@@ -24,6 +23,7 @@ import {
 import { apiRequest } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { useTasksStore } from '@/stores/tasks'
+import { useSettingStore } from '@/stores/settings'
 
 const authStore = useAuthStore()
 const tasksStore = useTasksStore()
@@ -94,15 +94,14 @@ const focusTaskTitles = computed(() => {
 const route = useRoute()
 const router = useRouter()
 const focusStore = useFocusStore()
-const timerSettingsStore = useTimerSettingsStore()
-const { breakDurationSeconds, focusDurationSeconds } = storeToRefs(timerSettingsStore)
-
+const settingsStore = useSettingStore()
+const { settings } = storeToRefs(settingsStore)
 const modes = computed<FocusMode[]>(() => [
   {
     id: 'focus',
     label: 'Focus',
     icon: TimerReset,
-    durationMs: focusDurationSeconds.value * 1000,
+    durationMs: settings.value.focusDurationSeconds * 1000,
     idleSubtitle: 'Stay in Shape',
     sessionBadge: 'Deep Work Mode',
     quote: '"Concentrate all your thoughts upon the work in hand."',
@@ -111,7 +110,7 @@ const modes = computed<FocusMode[]>(() => [
     id: 'break',
     label: 'Short Break',
     icon: Coffee,
-    durationMs: breakDurationSeconds.value * 1000,
+    durationMs: settings.value.breakDurationSeconds * 1000,
     idleSubtitle: 'Reset Your Energy',
     sessionBadge: 'Recovery Mode',
     quote: '"A short reset helps the next focus block feel lighter."',
@@ -240,7 +239,7 @@ const timerPrimaryText = computed(() => {
 const focusDurationDialogConfig = computed(() => ({
   title: 'Focus Duration',
   description: 'Choose your default deep work session length.',
-  selectedValue: focusDurationSeconds.value,
+  selectedValue: settings.value.focusDurationSeconds,
   options: [25 * 60, 30 * 60, 35 * 60, 45 * 60, 50 * 60, 60 * 60],
 }))
 
@@ -476,8 +475,17 @@ function openFocusDurationDialog() {
   isFocusDurationDialogOpen.value = true
 }
 
-function updateFocusDuration(nextValue: number) {
-  timerSettingsStore.setDurationSeconds('focus', nextValue)
+ async function updateFocusDuration(nextValue: number) {
+  if(selectedMode.value === 'focus') {
+    await settingsStore.updateSettings({
+      focusDurationSeconds: nextValue,
+    })
+    return
+  }
+
+  await settingsStore.updateSettings({
+    breakDurationSeconds: nextValue,
+  })
 }
 
 function consumeHomeEntryIntent() {

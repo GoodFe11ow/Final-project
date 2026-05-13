@@ -19,9 +19,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   formatDurationLabel,
-  useTimerSettingsStore,
   type TimerSettingKey,
-} from '@/stores/timer-settings'
+} from '@/lib/timer-duration'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingStore } from '@/stores/settings'
 
@@ -35,7 +34,6 @@ function hanldeLogout() {
   router.push('/')
 }
 const settingsStore = useSettingStore()
-const timerSettingsStore = useTimerSettingsStore()
 const { settings, isSaving: isSettingsSaving } = storeToRefs(settingsStore)
 
 const activeTimerSetting = ref<TimerSettingKey | null>(null)
@@ -181,8 +179,6 @@ async function updateTimerDuration(nextValue: number) {
       ? 'focusDurationSeconds'
       : 'breakDurationSeconds']: nextValue,
   })
-
-  timerSettingsStore.setDurationSeconds(activeTimerSetting.value, nextValue)
 }
 
 function openNotificationSetting(settingKey: NotificationSettingKey) {

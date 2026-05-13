@@ -7,7 +7,7 @@ import TimeStepper from '@/components/settings/TimeStepper.vue'
 import {
   formatDurationLabel,
   splitDurationSeconds,
-} from '@/stores/timer-settings'
+} from '@/lib/timer-duration'
 
 type DurationOption = {
   label?: string

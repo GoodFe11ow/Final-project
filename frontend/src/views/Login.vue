@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useRouter } from 'vue-router'
-import { Eye, EyeOff } from 'lucide-vue-next'
+import { Eye, EyeOff, LoaderCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuthStore } from '@/stores/auth'
@@ -17,6 +17,8 @@ const errorMessage = ref('')
 const isSubmitting = ref(false)
 
 async function handleSubmit() {
+  if (isSubmitting.value) return
+
   errorMessage.value = ''
 
   try {
@@ -72,6 +74,7 @@ async function handleSubmit() {
         </div>
 
         <Button type="submit" :disabled="isSubmitting" class="mt-2 h-12 w-full rounded-xl bg-blue-500 hover:bg-blue-600 text-base shadow-md">
+          <LoaderCircle v-if="isSubmitting" class="size-4 animate-spin" />
           {{  isSubmitting ? 'Logging in...' : 'Log in' }}
         </Button>
         <p v-if="errorMessage" class="text-sm text-red-500">{{ errorMessage }}</p>

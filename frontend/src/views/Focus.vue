@@ -563,12 +563,9 @@ async function persistCompletedSession(summary: SessionSummary) {
   }
 }
 
-function goHome() {
-  router.push('/home')
-}
-
-function goToTasks() {
-  router.push('/tasks')
+function returnToFocus() {
+  resetToIdle()
+  router.push('/focus')
 }
 
 function goToStats() {
@@ -924,14 +921,14 @@ watch(
           </Card>
         </button>
 
-        <div class="grid grid-cols-2 gap-4 pt-2">
+        <div class="grid grid-rows gap-4 pt-2">
           <Button
             type="button"
             variant="outline"
             class="h-16 rounded-[1.2rem] border-slate-200/90 bg-white text-[1.05rem] font-semibold uppercase tracking-[0.06em] text-slate-800 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.2)] hover:bg-white"
-            @click="goHome"
+            @click="returnToFocus"
           >
-            Home
+            Return to Focus
           </Button>
 
           <Button
@@ -966,9 +963,9 @@ watch(
           <Button
             type="button"
             class="h-16 w-full rounded-[1.3rem] bg-blue-600 text-[1.05rem] font-semibold text-white shadow-[0_20px_36px_-22px_rgba(37,99,235,0.8)] hover:bg-blue-600/90"
-            @click="goToTasks"
+            @click="returnToFocus"
           >
-            Return to Tasks
+            Return to Focus
           </Button>
 
           <Button
@@ -1008,18 +1005,10 @@ watch(
           <Button
             type="button"
             class="h-16 w-full rounded-[1.3rem] bg-blue-600 text-[1.05rem] font-semibold text-white shadow-[0_20px_36px_-22px_rgba(37,99,235,0.8)] hover:bg-blue-600/90"
-            @click="startSession"
+            @click="returnToFocus"
           >
-            Start Another
+            Return to Focus
           </Button>
-
-          <button
-            type="button"
-            class="w-full text-center text-[1.05rem] font-semibold text-blue-700"
-            @click="resetToIdle"
-          >
-            Reset
-          </button>
         </div>
       </template>
     </section>

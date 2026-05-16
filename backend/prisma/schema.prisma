@@ -89,6 +89,8 @@ model UserSettings {
 
   timezone String @default("Europe/Tallinn")
 
+  lastUsedFocusTaskId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

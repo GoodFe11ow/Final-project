@@ -32,4 +32,11 @@ export const updateSettingsSchema = z.object({
         .optional(),
 
     timezone: z.string().trim().min(1, "timezone is required").optional(),
+
+    lastUsedFocusTaskId: z
+    .string()
+    .trim()
+    .min(1)
+    .nullable()
+    .optional(),
 });

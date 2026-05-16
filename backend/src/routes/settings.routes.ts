@@ -19,6 +19,7 @@ const settingsSelect = {
   dailySummaryEnabled: true,
   dailySummaryTime: true,
   timezone: true,
+  lastUsedFocusTaskId: true,
 };
 
 const defaultSettings = {
@@ -31,7 +32,8 @@ const defaultSettings = {
     focusRemindersWeekdays: true,
     dailySummaryEnabled: true,
     dailySummaryTime: "20:00",
-    timezone: "Europe/Tallinn"
+    timezone: "Europe/Tallinn",
+    lastUsedFocusTaskId: null,
 };
 
 

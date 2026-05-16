@@ -6,7 +6,6 @@ import AppShell from '@/components/layout/AppShell.vue'
 import TimerDurationDialog from '@/components/settings/TimerDurationDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useFocusStore } from '@/stores/focus'
 import {
   Check,
   ChevronRight,
@@ -80,20 +79,8 @@ const isSavingSession = ref(false)
 const currentStreakDays = ref(0)
 const isLoadingCurrentStreak = ref(false)
 
-const focusTaskTitles = computed(() => {
-  const activeTaskTitles = tasks.value
-    .filter((task) => !task.completed)
-    .map((task) => task.title.trim())
-    .filter((title) => title.length > 0)
-
-  return activeTaskTitles.length > 0
-    ? activeTaskTitles
-    : ['General Focus Session']
-})
-
 const route = useRoute()
 const router = useRouter()
-const focusStore = useFocusStore()
 const settingsStore = useSettingStore()
 const { settings } = storeToRefs(settingsStore)
 const modes = computed<FocusMode[]>(() => [
@@ -120,7 +107,7 @@ const modes = computed<FocusMode[]>(() => [
 const circleRadius = 138
 const circleCircumference = 2 * Math.PI * circleRadius
 
-const taskIndex = ref(normalizeTaskIndex(focusStore.lastUsedTaskIndex))
+const taskIndex = ref(0)
 const selectedMode = ref<FocusModeId>('focus')
 const timerState = ref<TimerState>('idle')
 const plannedDurationMs = ref(getModeConfig('focus').durationMs)
@@ -135,7 +122,10 @@ const isFocusDurationDialogOpen = ref(false)
 const isTaskDropdownOpen = ref(false)
 
 const currentMode = computed(() => getModeConfig(selectedMode.value))
-const currentTask = computed(() => focusTaskTitles.value[taskIndex.value] ?? 'Focus session')
+const currentFocusTask = computed(() => {
+  return focusTasks.value[taskIndex.value] ?? focusTasks.value[0]
+})
+const currentTask = computed(() => currentFocusTask.value?.title ?? 'Focus session')
 const hideAppChrome = computed(() => {
   return timerState.value === 'running' || timerState.value === 'paused'
 })
@@ -244,18 +234,37 @@ const focusDurationDialogConfig = computed(() => ({
 }))
 
 const focusTaskOptions = computed(() => {
-  return focusTaskTitles.value.map((title, index) => ({
+  return focusTasks.value.map((task, index) => ({
     index,
-    title,
+    title: task.title,
     isSelected: index === taskIndex.value,
   }))
 })
+
+const focusTasks = computed(() => {
+  const activeTasks = tasks.value
+    .filter((task) => !task.completed)
+    .map((task) => ({
+      id: task.id,
+      title: task.title.trim(),
+    }))
+    .filter((task) => task.title.length > 0)
+  
+  return activeTasks.length > 0
+    ? activeTasks
+    : [{id: null, title: 'General Focus Session'}]
+})
+
+function getTaskIndexById(taskId: string | null) {
+  const foundIndex = focusTasks.value.findIndex((task) => task.id === taskId)
+  return foundIndex >= 0 ? foundIndex : 0
+}
 
 function getModeConfig(id: FocusModeId) {
   return modes.value.find((mode) => mode.id === id) ?? modes.value[0]
 }
 
-function normalizeTaskIndex(index: number, taskCount = focusTaskTitles.value.length) {
+function normalizeTaskIndex(index: number, taskCount = focusTasks.value.length) {
   if (taskCount <= 0) return 0
 
   const safeIndex = Number.isFinite(index) ? Math.floor(index) : 0
@@ -412,7 +421,7 @@ function handleTaskSelect(nextTaskIndex: number) {
   if (timerState.value !== 'idle') return
 
   taskIndex.value = normalizeTaskIndex(nextTaskIndex)
-  persistCurrentTask()
+   void persistCurrentTask()
   isTaskDropdownOpen.value = false
 }
 
@@ -425,7 +434,7 @@ function startSession() {
   animationNowMs.value = Date.now()
   isTaskDropdownOpen.value = false
   if (selectedMode.value === 'focus') {
-    persistCurrentTask()
+    void persistCurrentTask()
   }
 
   sessionSummary.value = null
@@ -464,8 +473,14 @@ function stopSession() {
   finalizeSession('stopped-early', elapsedNow)
 }
 
-function persistCurrentTask() {
-  focusStore.setLastUsedTaskIndex(taskIndex.value, focusTaskTitles.value.length)
+ async function persistCurrentTask() {
+  const nextTaskId = currentFocusTask.value.id ?? null
+
+  if (settings.value.lastUsedFocusTaskId === nextTaskId) return
+
+  await settingsStore.updateSettings({
+    lastUsedFocusTaskId: nextTaskId,
+  })
 }
 
 function openFocusDurationDialog() {
@@ -495,7 +510,7 @@ function consumeHomeEntryIntent() {
   if (!shouldAutostart && !shouldOpenFocusDuration) return
 
   selectedMode.value = 'focus'
-  taskIndex.value = normalizeTaskIndex(focusStore.lastUsedTaskIndex)
+  taskIndex.value = getTaskIndexById(settings.value.lastUsedFocusTaskId)
 
   if (timerState.value === 'idle') {
     if (shouldAutostart) {
@@ -601,12 +616,15 @@ watch(
 )
 
 watch(
-  () => focusTaskTitles.value.length,
-  () => {
-    taskIndex.value = normalizeTaskIndex(taskIndex.value)
-    persistCurrentTask()
-  },
-  { immediate: true },
+() => [focusTasks.value, settings.value.lastUsedFocusTaskId] as const,
+() => {
+  if(timerState.value !== 'idle') return
+
+  taskIndex.value = getTaskIndexById(settings.value.lastUsedFocusTaskId)
+},
+{
+  immediate: true
+}
 )
 </script>
 

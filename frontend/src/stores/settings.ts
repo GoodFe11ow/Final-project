@@ -13,6 +13,7 @@ export type AppSettings = {
     dailySummaryEnabled: boolean
     dailySummaryTime: string
     timezone: string
+    lastUsedFocusTaskId: string | null
 }
 
 const defaultSettings: AppSettings = {
@@ -26,6 +27,7 @@ const defaultSettings: AppSettings = {
     dailySummaryEnabled: true,
     dailySummaryTime: '20:00',
     timezone: 'Europe/Tallinn',
+    lastUsedFocusTaskId: null,
 }
 
 type GetSettingsResponse = {

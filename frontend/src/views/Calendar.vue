@@ -37,6 +37,7 @@ const tomorrowKey = addDaysToDateKey(todayKey, 1)
 
 const calendarMode = ref<CalendarMode>('month')
 const selectedDateKey = ref(todayKey)
+const isCalendarInfoOpen = ref(false)
 
 const tasksByDate = computed(() => {
   const groupedTasks = new Map<string, TaskItem[]>()
@@ -100,6 +101,14 @@ const calendarErrorMessage = computed(() => {
 
 function selectDate(dateKey: string) {
   selectedDateKey.value = dateKey
+}
+
+function toggleCalendarInfo() {
+  isCalendarInfoOpen.value = !isCalendarInfoOpen.value
+}
+
+function closeCalendarInfo() {
+  isCalendarInfoOpen.value = false
 }
 
 function resolveTaskDateKey(dateValue: string) {
@@ -237,18 +246,46 @@ function getDateIndicatorClass(dateKey: string) {
   <AppShell>
     <section class="flex flex-1 flex-col gap-6 pb-2 pt-3">
       <header class="pt-1 text-center">
-        <div class="flex items-center justify-center gap-2">
+        <button
+          v-if="isCalendarInfoOpen"
+          type="button"
+          class="fixed inset-0 z-10 cursor-default"
+          aria-label="Close calendar information"
+          @click="closeCalendarInfo"
+        />
+
+        <div class="relative z-20 inline-flex items-center justify-center gap-2">
           <h2 class="text-[2.1rem] font-semibold uppercase tracking-[0.08em] text-slate-900">
             Calendar
           </h2>
           <button
             type="button"
             class="inline-flex size-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-500"
-            title="More calendar tools are planned for a future update."
-            aria-label="More calendar tools are planned for a future update."
+            aria-label="Show calendar information"
+            :aria-expanded="isCalendarInfoOpen"
+            aria-controls="calendar-info-popover"
+            @click="toggleCalendarInfo"
           >
             <Info class="size-4" />
           </button>
+
+          <Transition
+            enter-active-class="transition duration-180 ease-out"
+            enter-from-class="-translate-y-1 scale-95 opacity-0"
+            enter-to-class="translate-y-0 scale-100 opacity-100"
+            leave-active-class="transition duration-120 ease-in"
+            leave-from-class="translate-y-0 scale-100 opacity-100"
+            leave-to-class="-translate-y-1 scale-95 opacity-0"
+          >
+            <div
+              v-if="isCalendarInfoOpen"
+              id="calendar-info-popover"
+              role="status"
+              class="absolute left-1/2 top-full z-20 mt-2 w-[17rem] -translate-x-1/2 rounded-[1rem] border border-slate-200/80 bg-white px-4 py-3 text-left text-sm font-medium leading-6 text-slate-500 shadow-[0_22px_60px_-28px_rgba(15,23,42,0.35)]"
+            >
+              More calendar tools are planned for a future update.
+            </div>
+          </Transition>
         </div>
       </header>
 

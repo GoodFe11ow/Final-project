@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { computed, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { CalendarDays, Flame, House, ListChecks, LoaderCircle, TimerReset } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { apiRequest } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
+import { useStatsStore } from '@/stores/stats'
 
 const props = withDefaults(
   defineProps<{
@@ -18,16 +19,8 @@ const props = withDefaults(
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-
-type StatsSummaryResponse = {
-  ok: true
-  data: {
-    currentStreakDays: number
-  }
-}
-
-const homeStreakDays = ref(0)
-const isLoadingHomeStreak = ref(false)
+const statsStore = useStatsStore()
+const { currentStreakDays, isLoadingSummary } = storeToRefs(statsStore)
 
 const navItems = computed(() => [
   { name: 'Home', to: '/home', icon: House },
@@ -40,7 +33,8 @@ function isActive(path: string) {
   return route.path === path
 }
 
-const showHomeStreak = computed(() => route.path === '/home')
+const streakRoutes = new Set(['/home', '/focus', '/tasks', '/calendar'])
+const showMainStreak = computed(() => streakRoutes.has(route.path))
 
 const mainInsetClass = computed(() =>
   props.chromeHidden
@@ -48,32 +42,11 @@ const mainInsetClass = computed(() =>
     : 'px-4 pb-[5.5rem] pt-[3.25rem]',
 )
 
-async function fetchHomeStreak() {
-  if (!authStore.token) {
-    homeStreakDays.value = 0
-    return
-  }
-
-  isLoadingHomeStreak.value = true
-
-  try {
-    const response = await apiRequest<StatsSummaryResponse>('/stats/summary', {
-      token: authStore.token,
-    })
-
-    homeStreakDays.value = response.data.currentStreakDays
-  } catch {
-    homeStreakDays.value = 0
-  } finally {
-    isLoadingHomeStreak.value = false
-  }
-}
-
 watch(
-  () => route.path,
-  (path) => {
-    if (path === '/home') {
-      void fetchHomeStreak()
+  () => [route.path, authStore.user?.id] as const,
+  ([path]) => {
+    if (streakRoutes.has(path)) {
+      void statsStore.fetchSummary()
     }
   },
   { immediate: true },
@@ -94,15 +67,15 @@ const isSettingRoute = computed(() => route.path === '/settings')
     >
       <div class="relative mx-auto w-full max-w-md">
         <div
-          v-if="showHomeStreak"
+          v-if="showMainStreak"
           class="pointer-events-auto absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-background/85 px-3 py-2 text-m font-semibold text-slate-700 shadow-[0_14px_30px_-18px_rgba(15,23,42,0.35)] backdrop-blur-sm"
         >
           <Flame class="size-6 text-orange-400" />
           <LoaderCircle
-            v-if="isLoadingHomeStreak"
+            v-if="isLoadingSummary"
             class="size-6 animate-spin text-slate-400"
           />
-          <span>{{ homeStreakDays }} days</span>
+          <span>{{ currentStreakDays }} days</span>
         </div>
 
         <div v-if="!isSettingRoute" class="pointer-events-auto absolute right-4 top-4">

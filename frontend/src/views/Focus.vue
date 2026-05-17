@@ -23,10 +23,13 @@ import { apiRequest } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { useTasksStore } from '@/stores/tasks'
 import { useSettingStore } from '@/stores/settings'
+import { useStatsStore } from '@/stores/stats'
 
 const authStore = useAuthStore()
 const tasksStore = useTasksStore()
+const statsStore = useStatsStore()
 const { tasks } = storeToRefs(tasksStore)
+const { currentStreakDays, isLoadingSummary } = storeToRefs(statsStore)
 
 type FocusModeId = 'focus' | 'break'
 type TimerState = 'idle' | 'running' | 'paused' | 'completed'
@@ -46,13 +49,6 @@ type CreateFocusSessionResponse = {
   ok: true
   data: {
     id: string
-  }
-}
-
-type StatsSummaryResponse = {
-  ok: true
-  data: {
-    currentStreakDays: number
   }
 }
 
@@ -76,8 +72,6 @@ type SessionSummary = {
 
 const sessionStartedAtMs = ref<number | null>(null)
 const isSavingSession = ref(false)
-const currentStreakDays = ref(0)
-const isLoadingCurrentStreak = ref(false)
 
 const route = useRoute()
 const router = useRouter()
@@ -525,27 +519,6 @@ function consumeHomeEntryIntent() {
 
 const sessionSaveError = ref('')
 
-async function fetchCurrentStreak() {
-  if (!authStore.token) {
-    currentStreakDays.value = 0
-    return
-  }
-
-  isLoadingCurrentStreak.value = true
-
-  try {
-    const response = await apiRequest<StatsSummaryResponse>('/stats/summary', {
-      token: authStore.token,
-    })
-
-    currentStreakDays.value = response.data.currentStreakDays
-  } catch (error) {
-    console.error('Failed to load current streak', error)
-  } finally {
-    isLoadingCurrentStreak.value = false
-  }
-}
-
 async function persistCompletedSession(summary: SessionSummary) {
   if(!authStore.token || sessionStartedAtMs.value === null) return
 
@@ -567,7 +540,7 @@ async function persistCompletedSession(summary: SessionSummary) {
       } satisfies CreateFocusSessionPayload)
      })
 
-     await fetchCurrentStreak()
+     await statsStore.fetchSummary({ force: true })
   } catch (error) {
     sessionSaveError.value =
       error instanceof Error ? error.message : 'Failed to save focus session'
@@ -593,7 +566,7 @@ onBeforeUnmount(() => {
 })
 
 onMounted(() => {
-  void fetchCurrentStreak()
+  void statsStore.fetchSummary()
 })
 
 watch(
@@ -925,7 +898,7 @@ watch(
                 </p>
                 <div class="mt-1 flex items-center gap-2">
                   <LoaderCircle
-                    v-if="isLoadingCurrentStreak || isSavingSession"
+                    v-if="isLoadingSummary || isSavingSession"
                     class="size-5 animate-spin text-orange-400"
                   />
                   <p class="text-[2rem] font-semibold leading-none tracking-[-0.04em] text-orange-600">

@@ -500,8 +500,9 @@ function openFocusDurationDialog() {
 function consumeHomeEntryIntent() {
   const shouldAutostart = route.query.autostart === '1'
   const shouldOpenFocusDuration = route.query.modal === 'focus-duration'
+  const shouldOpenTaskPicker = route.query.modal === 'task-picker'
 
-  if (!shouldAutostart && !shouldOpenFocusDuration) return
+  if (!shouldAutostart && !shouldOpenFocusDuration && !shouldOpenTaskPicker) return
 
   selectedMode.value = 'focus'
   taskIndex.value = getTaskIndexById(settings.value.lastUsedFocusTaskId)
@@ -511,6 +512,8 @@ function consumeHomeEntryIntent() {
       startSession()
     } else if (shouldOpenFocusDuration) {
       openFocusDurationDialog()
+    } else if (shouldOpenTaskPicker) {
+      isTaskDropdownOpen.value = true
     }
   }
 

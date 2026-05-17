@@ -78,7 +78,10 @@ function handleQuickAction(label: QuickAction['label']) {
     return
   }
 
-  router.push('/focus')
+  router.push({
+    path: '/focus',
+    query: { modal: 'task-picker' },
+  })
 }
 
 function openCreateTaskModal() {

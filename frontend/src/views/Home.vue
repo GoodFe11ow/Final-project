@@ -33,19 +33,48 @@ const welcomeHeading = computed(() =>
   hasSeenHomeBefore.value ? 'Welcome back,' : 'Welcome,',
 )
 
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function getTaskPriorityGroup(task: { assignedDate: string; completed: boolean}) {
+  if (task.completed) return 4
+
+  if (!task.assignedDate) return 3
+
+  const  todayKey = getTodayKey()
+
+  if(task.assignedDate < todayKey) return 0
+  if(task.assignedDate === todayKey) return 1
+
+  return 2
+}
+
 const currentTasks = computed(() => {
   return [...tasks.value]
-    .slice(-4)
-    .reverse()
+    .filter((task) => !task.completed)
+    .sort((left, right) => {
+      const leftGroup = getTaskPriorityGroup(left)
+      const rightGroup = getTaskPriorityGroup(right)
+
+      if (leftGroup !== rightGroup) {
+        return leftGroup - rightGroup
+      }
+
+      if ( leftGroup === 0 || leftGroup === 2) {
+        return left.assignedDate.localeCompare(right.assignedDate)
+      }
+
+      return 0
+    })
+    .slice(0, 4)
     .map((task) => {
       const progress = getTaskProgress(task)
 
       return {
         id: task.id,
         title: task.title,
-        statusLabel: progress.isComplete
-          ? 'Done'
-          : `${progress.completedCount}/${progress.totalCount}`,
+        statusLabel: `${progress.completedCount}/${progress.totalCount}`,
         completed: progress.isComplete,
       }
     })
@@ -146,7 +175,7 @@ watch(
             <p
               class="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-slate-500"
             >
-              Recent Tasks
+              Current Tasks
             </p>
             <Button
               type="button"
@@ -184,7 +213,7 @@ watch(
           </div>
 
           <div v-else class="px-5 py-6 text-sm text-slate-400">
-            No recent tasks yet.
+            No active tasks yet.
           </div>
         </CardContent>
       </Card>

@@ -19,17 +19,6 @@ statsRouter.get("/stats/summary", async (req, res, next) => {
     weekEnd.setDate(weekEnd.getDate() + 7);
 
     try {
-        // const completedTasksCount = await prisma.task.count({
-        //     where: {
-        //         userId: req.user!.id,
-        //         isCompleted: true,
-        //         completedAt: {
-        //             gte: weekStart,
-        //             lt: weekEnd,
-        //         }
-        //     },
-        // });
-
         const weeklyFocusSessions = await prisma.focusSession.findMany({
             where: {
                 userId: req.user!.id,
@@ -60,10 +49,9 @@ statsRouter.get("/stats/summary", async (req, res, next) => {
             },
         });
 
-        const completedTasksThisWeek = await prisma.task.findMany({
+        const completedTasksThisWeek = await prisma.taskCompletionHistory.findMany({
             where: {
                 userId: req.user!.id,
-                isCompleted: true,
                 completedAt: {
                     gte: weekStart,
                     lt: weekEnd,
@@ -74,20 +62,19 @@ statsRouter.get("/stats/summary", async (req, res, next) => {
             },
         });
 
-        const weeklyCompletions = Array.from({ length: 7}, (_, day) => ({
+        const weeklyCompletions = Array.from({ length: 7 }, (_, day) => ({
             day,
             value: 0
         }));
 
         for (const task of completedTasksThisWeek) {
-            if(!task.completedAt) continue;
 
             const jsDay = task.completedAt.getDay();
             const weekDayIndex = jsDay === 0 ? 6 : jsDay - 1;
 
             const bucket = weeklyCompletions[weekDayIndex];
 
-            if(!bucket) continue;
+            if (!bucket) continue;
 
             bucket.value += 1;
         }

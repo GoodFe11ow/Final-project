@@ -238,6 +238,26 @@ tasksRouter.patch("/tasks/:id", async (req, res, next) => {
             }
         });
 
+        if(isCompleted === true) {
+            const existingCompletionHistory = await prisma.taskCompletionHistory.findUnique({
+                where: {
+                    taskId: updateTask.id
+                },
+            })
+
+            if(!existingCompletionHistory) {
+                await prisma.taskCompletionHistory.create({
+                    data: {
+                        taskId: updateTask.id,
+                        taskTitleSnapshot: updateTask.title,
+                        completedAt: updateTask.completedAt ?? new Date(),
+                        userId: req.user!.id,
+                    },
+                })
+            }
+        }
+
+
         return res.status(200).json({
             ok: true,
             data: updateTask,

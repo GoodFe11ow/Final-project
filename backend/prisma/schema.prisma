@@ -18,9 +18,10 @@ model User {
   name         String
   passwordHash String
 
-  tasks         Task[]
-  focusSessions FocusSession[]
-  settings UserSettings?
+  tasks                 Task[]
+  focusSessions         FocusSession[]
+  settings              UserSettings?
+  taskCompletionHistory TaskCompletionHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -80,7 +81,7 @@ model UserSettings {
   breakDurationSeconds Int @default(300)
 
   focusRemindersEnabled  Boolean @default(true)
-  focusRemindersTime      String  @default("09:00")
+  focusRemindersTime     String  @default("09:00")
   focusRemindersEveryDay Boolean @default(false)
   focusRemindersWeekdays Boolean @default(true)
 
@@ -93,4 +94,15 @@ model UserSettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model TaskCompletionHistory {
+  id                String   @id @default(cuid())
+  taskId            String   @unique
+  taskTitleSnapshot String
+  completedAt       DateTime
+  createdAt         DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

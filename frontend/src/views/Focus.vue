@@ -29,7 +29,7 @@ const authStore = useAuthStore()
 const tasksStore = useTasksStore()
 const statsStore = useStatsStore()
 const { tasks } = storeToRefs(tasksStore)
-const { currentStreakDays, isLoadingSummary } = storeToRefs(statsStore)
+const { streakDays, isLoadingSummary } = storeToRefs(statsStore)
 
 type FocusModeId = 'focus' | 'break'
 type TimerState = 'idle' | 'running' | 'paused' | 'completed'
@@ -905,7 +905,7 @@ watch(
                     class="size-5 animate-spin text-orange-400"
                   />
                   <p class="text-[2rem] font-semibold leading-none tracking-[-0.04em] text-orange-600">
-                    {{ currentStreakDays }} days
+                    {{ streakDays }} days
                   </p>
                 </div>
               </div>

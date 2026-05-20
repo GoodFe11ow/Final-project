@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { computed, watch } from 'vue'
+import { computed, watch} from 'vue'
 import { storeToRefs } from 'pinia'
 import { CalendarDays, Flame, House, ListChecks, LoaderCircle, TimerReset } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const statsStore = useStatsStore()
-const { currentStreakDays, isLoadingSummary } = storeToRefs(statsStore)
+const { streakDays, streakStatus, isLoadingSummary } = storeToRefs(statsStore)
 
 const navItems = computed(() => [
   { name: 'Home', to: '/home', icon: House },
@@ -28,6 +28,12 @@ const navItems = computed(() => [
   { name: 'Tasks', to: '/tasks', icon: ListChecks },
   { name: 'Calendar', to: '/calendar', icon: CalendarDays },
 ])
+
+const streakIconClass = computed(() => {
+  return streakStatus.value === 'completed_today'
+    ? 'size-6 text-orange-400'
+    : 'size-6 text-slate-400'
+})
 
 function isActive(path: string) {
   return route.path === path
@@ -70,12 +76,12 @@ const isSettingRoute = computed(() => route.path === '/settings')
           v-if="showMainStreak"
           class="pointer-events-auto absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-background/85 px-3 py-2 text-m font-semibold text-slate-700 shadow-[0_14px_30px_-18px_rgba(15,23,42,0.35)] backdrop-blur-sm"
         >
-          <Flame class="size-6 text-orange-400" />
+          <Flame :class="streakIconClass" />
           <LoaderCircle
             v-if="isLoadingSummary"
             class="size-6 animate-spin text-slate-400"
           />
-          <span>{{ currentStreakDays }} days</span>
+          <span>{{ streakDays }}</span>
         </div>
 
         <div v-if="!isSettingRoute" class="pointer-events-auto absolute right-4 top-4">

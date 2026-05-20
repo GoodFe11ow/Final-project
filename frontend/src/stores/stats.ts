@@ -2,16 +2,21 @@ import { defineStore } from 'pinia'
 import { apiRequest } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 
+type StreakStatus = 'completed_today' | 'pending_today' | 'broken'
+
 type StatsSummaryResponse = {
   ok: true
   data: {
+    streakDays: number
+    streakStatus: StreakStatus
     currentStreakDays: number
   }
 }
 
 export const useStatsStore = defineStore('stats', {
   state: () => ({
-    currentStreakDays: 0,
+    streakDays: 0,
+    streakStatus: 'broken' as StreakStatus,
     isLoadingSummary: false,
     loadedForUserId: null as string | null,
     errorMessage: '',
@@ -21,7 +26,8 @@ export const useStatsStore = defineStore('stats', {
       const authStore = useAuthStore()
 
       if (!authStore.token || !authStore.user) {
-        this.currentStreakDays = 0
+        this.streakStatus = 'broken'
+        this.streakDays = 0
         this.loadedForUserId = null
         this.errorMessage = ''
         return
@@ -43,7 +49,8 @@ export const useStatsStore = defineStore('stats', {
           token: authStore.token,
         })
 
-        this.currentStreakDays = response.data.currentStreakDays
+        this.streakDays = response.data.streakDays
+        this.streakStatus = response.data.streakStatus
         this.loadedForUserId = authStore.user.id
       } catch (error) {
         this.loadedForUserId = null

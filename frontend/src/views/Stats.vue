@@ -15,10 +15,13 @@ type WeeklyCompletion = {
   value: number
 }
 
+type StreakStatus = 'completed_today' | 'pending_today' | 'broken'
+
 type StatsSummary = {
   completedTasksCount: number
   focusMinutesTotal: number
-  currentStreakDays: number
+  streakDays: number
+  streakStatus: StreakStatus
   weeklyCompletions: WeeklyCompletion[]
 }
 
@@ -81,7 +84,7 @@ const weeklyChartData = computed<WeeklyChartDatum[]>(() => {
 })
 
 const currentStreakDays = computed(() => {
-  return statsSummary.value?.currentStreakDays ?? 0
+  return statsSummary.value?.streakDays ?? 0
 })
 
 const chartMaxValue = computed(() => {
@@ -112,6 +115,12 @@ const statsErrorMessage = computed(() => {
   }
 
   return 'We couldn’t load your weekly statistics right now. Please try again.'
+})
+
+const streakBadgeClass = computed(() => {
+  return statsSummary.value?.streakStatus === 'completed_today'
+    ? 'flex size-11 items-center justify-center rounded-[1rem] bg-[#ffe0cf] text-amber-700'
+    : 'flex size-11 items-center justify-center rounded-[1rem] bg-slate-200 text-slate-500'
 })
 
 function getChartBarColor(datum: WeeklyChartDatum) {
@@ -231,7 +240,7 @@ onMounted(() => {
 
           <Card class="rounded-[1.35rem] border-slate-200/80 shadow-[0_20px_42px_-34px_rgba(15,23,42,0.16)]">
             <CardContent class="flex items-center gap-4 p-4">
-              <span class="flex size-11 items-center justify-center rounded-[1rem] bg-[#ffe0cf] text-amber-700">
+              <span :class="streakBadgeClass">
                 <Flame class="size-5" />
               </span>
 

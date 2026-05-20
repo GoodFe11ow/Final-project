@@ -43,7 +43,6 @@ const { tasks, isLoading, errorMessage } = storeToRefs(tasksStore)
 const route = useRoute()
 const router = useRouter()
 
-const selectedTaskId = ref<string | null>(null)
 const dialogMode = ref<DialogMode | null>(null)
 const taskForm = reactive<TaskFormState>(createEmptyTaskForm())
 const isSavingTask = ref(false)
@@ -91,6 +90,12 @@ const submitLabel = computed(() => {
 })
 
 const canSubmitForm = computed(() => taskForm.title.trim().length > 0)
+
+const selectedTaskId = computed(() => {
+  const taskQuery = route.query.task
+
+  return typeof taskQuery === 'string' ? taskQuery : null
+})
 
 function createDraftSubtaskId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -162,11 +167,11 @@ function removeSubtaskField(index: number) {
 }
 
 function openTaskDetails(taskId: string) {
-  selectedTaskId.value = taskId
+  router.push({ path: '/tasks', query: { task: taskId } })
 }
 
 function goBackToList() {
-  selectedTaskId.value = null
+  void router.push({ path: '/tasks' })
 }
 
 function isSubtaskPending(subtaskId: string) {
@@ -233,7 +238,7 @@ async function deleteSelectedTask() {
 
   try {
     await tasksStore.deleteTask(selectedTask.value.id)
-    selectedTaskId.value = null
+    void router.replace({ path: '/tasks' })
   } finally {
     isDeletingTask.value = false
   }

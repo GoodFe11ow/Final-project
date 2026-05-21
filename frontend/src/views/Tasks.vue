@@ -339,90 +339,157 @@ watch(
 
         <div v-else class="flex flex-1 flex-col gap-4">
           <div class="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
-            <div class="space-y-3 ">
-              <button type="button"
-                class="flex w-full items-center justify-between rounded-[1.2rem] bg-white p-4 text-left shadow-[0_10px_24px_-20px_rgba(15,23,42,0.28)]"
-                @click="isActiveSectionOpen = !isActiveSectionOpen">
-                <span class="text-[1.5rem] font-semibold text-slate-900 ">
-                  Active Tasks
-                </span>
-                <span class="flex items-center gap-2 text-slate-500">
-                  <span class="text-sm font-semibold">{{ activeTasks.length }}</span>
-                  <ChevronDown class="size-4 transition-transform duration-200"
-                    :class="isActiveSectionOpen ? 'rotate-0' : '-rotate-90'" />
-                </span>
+            <div class="space-y-3">
+              <button
+                type="button"
+                class="w-full text-left"
+                @click="isActiveSectionOpen = !isActiveSectionOpen"
+              >
+                <Card class="rounded-[1.6rem] py-3 border-slate-200/80 bg-white shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)]">
+                  <CardContent class="flex items-center justify-between p-4">
+                    <span class="text-[1.12rem] font-semibold tracking-[-0.03em] text-slate-800">
+                      Active Tasks
+                    </span>
+
+                    <span class="flex items-center gap-2 text-slate-500">
+                      <span class="text-sm font-semibold">{{ activeTasks.length }}</span>
+                      <ChevronDown
+                        class="size-4 transition-transform duration-300"
+                        :class="isActiveSectionOpen ? 'rotate-0' : '-rotate-90'"
+                      />
+                    </span>
+                  </CardContent>
+                </Card>
               </button>
-              <div v-if="isActiveSectionOpen" class="space-y-4">
-                <button v-for="task in activeTasks" :key="task.id" type="button" class="w-full text-left"
-                  @click="openTaskDetails(task.id)">
-                  <Card
-                    class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
-                    :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
-                    <CardContent class="p-4">
-                      <div class="flex items-start justify-between gap-3">
-                        <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
-                          :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
-                          {{ task.title }}
-                        </h3>
-                        <div class="flex items-center gap-2">
-                          <span class="text-sm font-semibold"
-                            :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
-                            {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
-                          </span>
-                          <span v-if="task.completed"
-                            class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
-                            <Check class="size-3.5 stroke-[3]" />
-                          </span>
-                        </div>
-                      </div>
-                      <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
-                        :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
-                    </CardContent>
-                  </Card>
-                </button>
+
+              <div
+                class="grid transition-all duration-300 ease-out"
+                :class="isActiveSectionOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'"
+              >
+                <div class="overflow-hidden">
+                  <p v-if="activeTasks.length === 0" class="px-2 py-3 text-sm text-slate-400">
+                    No active tasks right now.
+                  </p>
+
+                  <div v-else class="space-y-4 pt-1">
+                    <button
+                      v-for="task in activeTasks"
+                      :key="task.id"
+                      type="button"
+                      class="w-full text-left"
+                      @click="openTaskDetails(task.id)"
+                    >
+                      <Card
+                        class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
+                        :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'"
+                      >
+                        <CardContent class="p-4">
+                          <div class="flex items-start justify-between gap-3">
+                            <h3
+                              class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
+                              :class="task.completed ? 'text-slate-500' : 'text-slate-800'"
+                            >
+                              {{ task.title }}
+                            </h3>
+                            <div class="flex items-center gap-2">
+                              <span class="text-sm font-semibold" :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
+                                {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
+                              </span>
+                              <span
+                                v-if="task.completed"
+                                class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white"
+                              >
+                                <Check class="size-3.5 stroke-[3]" />
+                              </span>
+                            </div>
+                          </div>
+                          <Progress
+                            :model-value="getTaskProgress(task).percent"
+                            class="mt-5 h-2"
+                            :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'"
+                          />
+                        </CardContent>
+                      </Card>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
+
             <div class="space-y-3">
-              <button type="button"
-                class="flex w-full items-center  justify-between rounded-[1.2rem] bg-[#eef2ff] px-4 py-3 text-left shadow-[0_10px_24px_-20px_rgba(15,23,42,0.28)]"
-                @click="isCompletedSectionOpen = !isCompletedSectionOpen">
-                <span class="text-[1.5rem] font-semibold text-slate-900">
-                  Completed Tasks
-                </span>
-                <span class="flex items-center gap-2 text-slate-500">
-                  <span class="text-sm font-semibold">{{ completedTasks.length }}</span>
-                  <ChevronDown class="size-4 transition-transform duration-200"
-                    :class="isCompletedSectionOpen ? 'rotate-0' : '-rotate-90'" />
-                </span>
+              <button
+                type="button"
+                class="w-full text-left"
+                @click="isCompletedSectionOpen = !isCompletedSectionOpen"
+              >
+                <Card class="rounded-[1.6rem] py-3 border-slate-200/80 bg-[#eef2ff] shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)]">
+                  <CardContent class="flex items-center justify-between p-4">
+                    <span class="text-[1.12rem] font-semibold tracking-[-0.03em] text-slate-800">
+                      Completed Tasks
+                    </span>
+
+                    <span class="flex items-center gap-2 text-slate-500">
+                      <span class="text-sm font-semibold">{{ completedTasks.length }}</span>
+                      <ChevronDown
+                        class="size-4 transition-transform duration-300"
+                        :class="isCompletedSectionOpen ? 'rotate-0' : '-rotate-90'"
+                      />
+                    </span>
+                  </CardContent>
+                </Card>
               </button>
-              <div v-if="isCompletedSectionOpen" class="space-y-4">
-                <button v-for="task in completedTasks" :key="task.id" type="button" class="w-full text-left"
-                  @click="openTaskDetails(task.id)">
-                  <Card
-                    class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
-                    :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
-                    <CardContent class="p-4">
-                      <div class="flex items-start justify-between gap-3">
-                        <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
-                          :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
-                          {{ task.title }}
-                        </h3>
-                        <div class="flex items-center gap-2">
-                          <span class="text-sm font-semibold"
-                            :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
-                            {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
-                          </span>
-                          <span v-if="task.completed"
-                            class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
-                            <Check class="size-3.5 stroke-[3]" />
-                          </span>
-                        </div>
-                      </div>
-                      <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
-                        :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
-                    </CardContent>
-                  </Card>
-                </button>
+
+              <div
+                class="grid transition-all duration-300 ease-out"
+                :class="isCompletedSectionOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'"
+              >
+                <div class="overflow-hidden">
+                  <p v-if="completedTasks.length === 0" class="px-2 py-3 text-sm text-slate-400">
+                    No completed tasks yet.
+                  </p>
+
+                  <div v-else class="space-y-4 pt-1">
+                    <button
+                      v-for="task in completedTasks"
+                      :key="task.id"
+                      type="button"
+                      class="w-full text-left"
+                      @click="openTaskDetails(task.id)"
+                    >
+                      <Card
+                        class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
+                        :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'"
+                      >
+                        <CardContent class="p-4">
+                          <div class="flex items-start justify-between gap-3">
+                            <h3
+                              class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
+                              :class="task.completed ? 'text-slate-500' : 'text-slate-800'"
+                            >
+                              {{ task.title }}
+                            </h3>
+                            <div class="flex items-center gap-2">
+                              <span class="text-sm font-semibold" :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
+                                {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
+                              </span>
+                              <span
+                                v-if="task.completed"
+                                class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white"
+                              >
+                                <Check class="size-3.5 stroke-[3]" />
+                              </span>
+                            </div>
+                          </div>
+                          <Progress
+                            :model-value="getTaskProgress(task).percent"
+                            class="mt-5 h-2"
+                            :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'"
+                          />
+                        </CardContent>
+                      </Card>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

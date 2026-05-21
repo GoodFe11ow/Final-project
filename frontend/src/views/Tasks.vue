@@ -43,7 +43,14 @@ const { tasks, isLoading, errorMessage } = storeToRefs(tasksStore)
 const route = useRoute()
 const router = useRouter()
 
-const dialogMode = ref<DialogMode | null>(null)
+const dialogMode = computed<DialogMode | null>(() => {
+  const modalQuery = route.query.modal
+
+  if( modalQuery === 'create') return 'create'
+  if( modalQuery === 'edit') return 'edit'
+
+  return null
+})
 const taskForm = reactive<TaskFormState>(createEmptyTaskForm())
 const isSavingTask = ref(false)
 const isDeletingTask = ref(false)
@@ -74,7 +81,7 @@ const isDialogOpen = computed({
   get: () => dialogMode.value !== null,
   set: (nextOpen) => {
     if (!nextOpen) {
-      dialogMode.value = null
+      closeDialog()
     }
   },
 })
@@ -139,20 +146,31 @@ function fillTaskForm(task: TaskItem) {
 }
 
 function openCreateDialog() {
-  selectedTaskId.value = null
-  resetTaskForm()
-  dialogMode.value = 'create'
+  void router.push({
+    path: '/tasks',
+    query: { modal: 'create' },
+  })
 }
 
 function openEditDialog() {
   if (!selectedTask.value) return
 
-  fillTaskForm(selectedTask.value)
-  dialogMode.value = 'edit'
+  void router.push({
+    path: '/tasks',
+    query: {
+      task: selectedTask.value.id,
+      modal: 'edit'
+    }
+  })
 }
 
 function closeDialog() {
-  dialogMode.value = null
+  const { modal, ...restQuery } = route.query
+
+  void router.push({
+    path: route.path,
+    query: restQuery,
+  })
 }
 
 function addSubtaskField() {
@@ -254,19 +272,24 @@ function progressMessage(task: TaskItem) {
   return 'Start with the first small step.'
 }
 
-function consumeRouteIntent() {
-  if (route.query.modal !== 'create') return
-
-  openCreateDialog()
-  void router.replace({ path: route.path })
-}
-
 watch(
-  () => route.query.modal,
-  () => {
-    consumeRouteIntent()
+  () => [dialogMode.value, selectedTask.value?.id] as const,
+  ([mode]) => {
+    if (mode === 'create') {
+      resetTaskForm()
+      return
+    }
+
+    if (mode === 'edit') {
+      if(!selectedTask.value) {
+        closeDialog()
+        return
+      }
+
+      fillTaskForm(selectedTask.value)
+    }
   },
-  { immediate: true },
+  { immediate: true }
 )
 </script>
 

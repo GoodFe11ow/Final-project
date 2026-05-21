@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Trash2,
   X,
+  ChevronDown
 } from 'lucide-vue-next'
 import {
   getTaskProgress,
@@ -46,8 +47,8 @@ const router = useRouter()
 const dialogMode = computed<DialogMode | null>(() => {
   const modalQuery = route.query.modal
 
-  if( modalQuery === 'create') return 'create'
-  if( modalQuery === 'edit') return 'edit'
+  if (modalQuery === 'create') return 'create'
+  if (modalQuery === 'edit') return 'edit'
 
   return null
 })
@@ -56,6 +57,8 @@ const isSavingTask = ref(false)
 const isDeletingTask = ref(false)
 const pendingSubtaskIds = ref<string[]>([])
 const isCompletingTask = ref(false)
+const isActiveSectionOpen = ref(true)
+const isCompletedSectionOpen = ref(false)
 
 const saveButtonLabel = computed(() => {
   if (isSavingTask.value) {
@@ -65,8 +68,12 @@ const saveButtonLabel = computed(() => {
   return submitLabel.value
 })
 
-const sortedTasks = computed(() => {
-  return [...tasks.value].sort((left, right) => Number(left.completed) - Number(right.completed))
+const activeTasks = computed(() => {
+  return tasks.value.filter((task) => !task.completed)
+})
+
+const completedTasks = computed(() => {
+  return tasks.value.filter((task) => task.completed)
 })
 
 const selectedTask = computed(() => {
@@ -281,7 +288,7 @@ watch(
     }
 
     if (mode === 'edit') {
-      if(!selectedTask.value) {
+      if (!selectedTask.value) {
         closeDialog()
         return
       }
@@ -312,7 +319,7 @@ watch(
           <p class="text-red-500">{{ errorMessage }}</p>
         </div>
 
-        <div v-else-if="sortedTasks.length === 0" class="flex flex-1 items-center">
+        <div v-else-if="tasks.length === 0" class="flex flex-1 items-center">
           <div class="flex w-full flex-1 flex-col items-center justify-center px-6 text-center">
             <div
               class="flex size-20 items-center justify-center rounded-full border-[3px] border-blue-400 text-blue-500">
@@ -332,34 +339,92 @@ watch(
 
         <div v-else class="flex flex-1 flex-col gap-4">
           <div class="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
-            <button v-for="task in sortedTasks" :key="task.id" type="button" class="w-full text-left"
-              @click="openTaskDetails(task.id)">
-              <Card
-                class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
-                :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
-                <CardContent class="p-4">
-                  <div class="flex items-start justify-between gap-3">
-                    <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
-                      :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
-                      {{ task.title }}
-                    </h3>
-
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-semibold" :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
-                        {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
-                      </span>
-                      <span v-if="task.completed"
-                        class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
-                        <Check class="size-3.5 stroke-[3]" />
-                      </span>
-                    </div>
-                  </div>
-
-                  <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
-                    :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
-                </CardContent>
-              </Card>
-            </button>
+            <div class="space-y-3 ">
+              <button type="button"
+                class="flex w-full items-center justify-between rounded-[1.2rem] bg-white p-4 text-left shadow-[0_10px_24px_-20px_rgba(15,23,42,0.28)]"
+                @click="isActiveSectionOpen = !isActiveSectionOpen">
+                <span class="text-[1.5rem] font-semibold text-slate-900 ">
+                  Active Tasks
+                </span>
+                <span class="flex items-center gap-2 text-slate-500">
+                  <span class="text-sm font-semibold">{{ activeTasks.length }}</span>
+                  <ChevronDown class="size-4 transition-transform duration-200"
+                    :class="isActiveSectionOpen ? 'rotate-0' : '-rotate-90'" />
+                </span>
+              </button>
+              <div v-if="isActiveSectionOpen" class="space-y-4">
+                <button v-for="task in activeTasks" :key="task.id" type="button" class="w-full text-left"
+                  @click="openTaskDetails(task.id)">
+                  <Card
+                    class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
+                    :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
+                    <CardContent class="p-4">
+                      <div class="flex items-start justify-between gap-3">
+                        <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
+                          :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
+                          {{ task.title }}
+                        </h3>
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm font-semibold"
+                            :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
+                            {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
+                          </span>
+                          <span v-if="task.completed"
+                            class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
+                            <Check class="size-3.5 stroke-[3]" />
+                          </span>
+                        </div>
+                      </div>
+                      <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
+                        :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
+                    </CardContent>
+                  </Card>
+                </button>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <button type="button"
+                class="flex w-full items-center  justify-between rounded-[1.2rem] bg-[#eef2ff] px-4 py-3 text-left shadow-[0_10px_24px_-20px_rgba(15,23,42,0.28)]"
+                @click="isCompletedSectionOpen = !isCompletedSectionOpen">
+                <span class="text-[1.5rem] font-semibold text-slate-900">
+                  Completed Tasks
+                </span>
+                <span class="flex items-center gap-2 text-slate-500">
+                  <span class="text-sm font-semibold">{{ completedTasks.length }}</span>
+                  <ChevronDown class="size-4 transition-transform duration-200"
+                    :class="isCompletedSectionOpen ? 'rotate-0' : '-rotate-90'" />
+                </span>
+              </button>
+              <div v-if="isCompletedSectionOpen" class="space-y-4">
+                <button v-for="task in completedTasks" :key="task.id" type="button" class="w-full text-left"
+                  @click="openTaskDetails(task.id)">
+                  <Card
+                    class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
+                    :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
+                    <CardContent class="p-4">
+                      <div class="flex items-start justify-between gap-3">
+                        <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
+                          :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
+                          {{ task.title }}
+                        </h3>
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm font-semibold"
+                            :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
+                            {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
+                          </span>
+                          <span v-if="task.completed"
+                            class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
+                            <Check class="size-3.5 stroke-[3]" />
+                          </span>
+                        </div>
+                      </div>
+                      <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
+                        :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
+                    </CardContent>
+                  </Card>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="mt-auto flex justify-center pt-4">
@@ -410,20 +475,13 @@ watch(
               <div v-for="subtask in selectedTask.subtasks" :key="subtask.id" class="flex items-center gap-3">
                 <div class="flex size-5 items-center justify-center">
                   <LoaderCircle v-if="isSubtaskPending(subtask.id)" class="size-4 animate-spin text-blue-500" />
-                  <Checkbox
-                    v-else
-                    :model-value="subtask.completed"
-                    :disabled="isCompletingTask"
-                    @update:model-value="toggleSelectedSubtask(subtask.id)"
-                  />
+                  <Checkbox v-else :model-value="subtask.completed" :disabled="isCompletingTask"
+                    @update:model-value="toggleSelectedSubtask(subtask.id)" />
                 </div>
-                <span
-                  class="text-[1.02rem]"
-                  :class="[
-                    subtask.completed ? 'text-slate-400 line-through' : 'text-slate-700',
-                    isSubtaskPending(subtask.id) ? 'opacity-60' : '',
-                  ]"
-                >
+                <span class="text-[1.02rem]" :class="[
+                  subtask.completed ? 'text-slate-400 line-through' : 'text-slate-700',
+                  isSubtaskPending(subtask.id) ? 'opacity-60' : '',
+                ]">
                   {{ subtask.title }}
                 </span>
               </div>
@@ -469,7 +527,8 @@ watch(
       </template>
 
       <Dialog v-model:open="isDialogOpen">
-        <DialogContent class="flex max-h-[85vh] max-w-[23rem] flex-col gap-0 overflow-hidden rounded-[1.9rem] border-white/80 p-0">
+        <DialogContent
+          class="flex max-h-[85vh] max-w-[23rem] flex-col gap-0 overflow-hidden rounded-[1.9rem] border-white/80 p-0">
           <form class="flex min-h-0 flex-1 flex-col bg-white" @submit.prevent="saveTask">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <Button type="button" variant="ghost" size="icon-sm"

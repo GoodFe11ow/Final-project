@@ -568,19 +568,19 @@ watch(
       </template>
 
       <template v-else>
-        <header class="flex items-center justify-between gap-3 pt-1">
-          <Button type="button" variant="ghost" size="icon-sm"
-            class="rounded-full text-blue-500 hover:bg-blue-50 hover:text-blue-600" @click="goBackToList">
-            <ArrowLeft class="size-5" />
+        <header class="flex items-center justify-between gap-3 pt-3">
+          <Button type="button" variant="ghost" size="icon-lg"
+            class="rounded-full  text-blue-500 bg-[#F1F6FF] hover:bg-blue-50 hover:text-blue-600" @click="goBackToList">
+            <ArrowLeft class="!size-6" />
           </Button>
 
-          <h2 class="text-lg font-semibold tracking-[-0.02em] text-slate-900">
+          <h2 class="text-2xl font-semibold  text-slate-900">
             Task Details
           </h2>
 
-          <Button type="button" variant="ghost" size="icon-sm"
-            class="rounded-full text-blue-500 hover:bg-blue-50 hover:text-blue-600" @click="openEditDialog">
-            <Pencil class="size-4" />
+          <Button type="button" variant="ghost" size="icon-lg"
+            class="rounded-full text-blue-500 bg-[#F1F6FF] hover:bg-blue-50 hover:text-blue-600" @click="openEditDialog">
+            <Pencil class="!size-6" />
           </Button>
         </header>
 

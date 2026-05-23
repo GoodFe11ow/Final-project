@@ -15,6 +15,7 @@ export type TaskItem = {
   assignedDate: string
   completed: boolean
   subtasks: TaskSubtask[]
+  createdAt: string
 }
 
 export type TaskDraftSubtask = {
@@ -68,6 +69,7 @@ type BackendTask = {
   assignatedDate: string | null
   isCompleted: boolean
   subtasks: BackendSubtask[]
+  createdAt: string
 }
 
 type GetTasksResponse = {
@@ -152,6 +154,7 @@ function mapBackendTask(task: BackendTask): TaskItem {
     assignedDate: task.assignatedDate ? task.assignatedDate.slice(0, 10) : '',
     completed: subtasks.length > 0 ? subtasks.every((subtask) => subtask.completed) : task.isCompleted,
     subtasks,
+    createdAt: task.createdAt,
   }
 }
 

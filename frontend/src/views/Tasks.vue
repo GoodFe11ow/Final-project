@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import {
   ArrowLeft,
+  ArrowUpDown,
   CalendarDays,
   Check,
   Circle,
@@ -21,7 +22,7 @@ import {
   RefreshCw,
   Trash2,
   X,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-vue-next'
 import {
   getTaskProgress,
@@ -29,8 +30,23 @@ import {
   type TaskDraftSubtask,
   type TaskItem,
 } from '@/stores/tasks'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type DialogMode = 'create' | 'edit'
+
+type ActiveTaskMode =
+  | 'created_desc'
+  | 'created_asc'
+  | 'assigned_asc'
+  | 'assigned_desc'
 
 type TaskFormState = {
   title: string
@@ -59,6 +75,20 @@ const pendingSubtaskIds = ref<string[]>([])
 const isCompletingTask = ref(false)
 const isActiveSectionOpen = ref(true)
 const isCompletedSectionOpen = ref(false)
+const activeTaskSortMode = ref<ActiveTaskMode>('created_desc')
+
+const activeTaskSortLabel = computed(() => {
+  switch (activeTaskSortMode.value) {
+    case 'created_desc':
+      return 'Newest first'
+    case 'created_asc':
+      return 'Oldest first'
+    case 'assigned_asc':
+      return 'Planned: earliest first'
+    case 'assigned_desc':
+      return 'Planned: latest first'
+  }
+})
 
 const saveButtonLabel = computed(() => {
   if (isSavingTask.value) {
@@ -69,7 +99,24 @@ const saveButtonLabel = computed(() => {
 })
 
 const activeTasks = computed(() => {
-  return tasks.value.filter((task) => !task.completed)
+  const nextTasks = tasks.value.filter((task) => !task.completed)
+
+  return nextTasks.sort((left, right) => {
+    switch (activeTaskSortMode.value) {
+      case 'created_desc':
+        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+
+      case 'created_asc':
+        return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+
+      case 'assigned_asc':
+        return commpareAssignedDate(left, right, 'asc')
+
+      case 'assigned_desc':
+        return commpareAssignedDate(left, right, 'desc')
+
+    }
+  })
 })
 
 const completedTasks = computed(() => {
@@ -279,6 +326,19 @@ function progressMessage(task: TaskItem) {
   return 'Start with the first small step.'
 }
 
+function commpareAssignedDate(left: TaskItem, right: TaskItem, direction: 'asc' | 'desc') {
+  const leftDate = left.assignedDate
+  const rightDate = right.assignedDate
+
+  if (!leftDate && !rightDate) return 0
+  if (!leftDate) return 1
+  if (!rightDate) return -1
+
+  return direction === 'asc'
+    ? leftDate.localeCompare(rightDate)
+    : rightDate.localeCompare(leftDate)
+}
+
 watch(
   () => [dialogMode.value, selectedTask.value?.id] as const,
   ([mode]) => {
@@ -340,74 +400,96 @@ watch(
         <div v-else class="flex flex-1 flex-col gap-4">
           <div class="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
             <div class="space-y-3">
-              <button
-                type="button"
-                class="w-full text-left"
-                @click="isActiveSectionOpen = !isActiveSectionOpen"
-              >
-                <Card class="rounded-[1.6rem] py-3 border-slate-200/80 bg-white shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)]">
-                  <CardContent class="flex items-center justify-between p-4">
+              <Card
+                class="rounded-[1.6rem] py-3 border-slate-200/80 bg-white shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)]">
+                <CardContent class="flex items-center justify-between gap-3 p-4">
+                  <button
+                    type="button"
+                    class="flex min-w-0 flex-1 items-center justify-between text-left"
+                    @click="isActiveSectionOpen = !isActiveSectionOpen"
+                  >
                     <span class="text-[1.12rem] font-semibold tracking-[-0.03em] text-slate-800">
                       Active Tasks
                     </span>
 
-                    <span class="flex items-center gap-2 text-slate-500">
+                    <span class="ml-3 flex items-center gap-2 text-slate-500">
                       <span class="text-sm font-semibold">{{ activeTasks.length }}</span>
-                      <ChevronDown
-                        class="size-4 transition-transform duration-300"
-                        :class="isActiveSectionOpen ? 'rotate-0' : '-rotate-90'"
-                      />
+                      <ChevronDown class="size-4 transition-transform duration-300"
+                        :class="isActiveSectionOpen ? 'rotate-0' : '-rotate-90'" />
                     </span>
-                  </CardContent>
-                </Card>
-              </button>
+                  </button>
 
-              <div
-                class="grid transition-all duration-300 ease-out"
-                :class="isActiveSectionOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'"
-              >
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        class="h-9 rounded-full border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                        :title="activeTaskSortLabel"
+                      >
+                        <ArrowUpDown class="mr-2 size-4 shrink-0 text-slate-500" />
+                        Sort
+                      </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent align="end" class="w-56">
+                      <DropdownMenuLabel>Sort active tasks</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuRadioGroup v-model="activeTaskSortMode">
+                        <DropdownMenuRadioItem value="created_desc">
+                          Newest first
+                        </DropdownMenuRadioItem>
+
+                        <DropdownMenuRadioItem value="created_asc">
+                          Oldest first
+                        </DropdownMenuRadioItem>
+
+                        <DropdownMenuRadioItem value="assigned_asc">
+                          Planned: earliest first
+                        </DropdownMenuRadioItem>
+
+                        <DropdownMenuRadioItem value="assigned_desc">
+                          Planned: latest first
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardContent>
+              </Card>
+
+              <div class="grid transition-all duration-300 ease-out"
+                :class="isActiveSectionOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'">
                 <div class="overflow-hidden">
                   <p v-if="activeTasks.length === 0" class="px-2 py-3 text-sm text-slate-400">
                     No active tasks right now.
                   </p>
 
                   <div v-else class="space-y-4 pt-1">
-                    <button
-                      v-for="task in activeTasks"
-                      :key="task.id"
-                      type="button"
-                      class="w-full text-left"
-                      @click="openTaskDetails(task.id)"
-                    >
+                    <button v-for="task in activeTasks" :key="task.id" type="button" class="w-full text-left"
+                      @click="openTaskDetails(task.id)">
                       <Card
                         class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
-                        :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'"
-                      >
+                        :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
                         <CardContent class="p-4">
                           <div class="flex items-start justify-between gap-3">
-                            <h3
-                              class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
-                              :class="task.completed ? 'text-slate-500' : 'text-slate-800'"
-                            >
+                            <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
+                              :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
                               {{ task.title }}
                             </h3>
                             <div class="flex items-center gap-2">
-                              <span class="text-sm font-semibold" :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
+                              <span class="text-sm font-semibold"
+                                :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
                                 {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
                               </span>
-                              <span
-                                v-if="task.completed"
-                                class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white"
-                              >
+                              <span v-if="task.completed"
+                                class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
                                 <Check class="size-3.5 stroke-[3]" />
                               </span>
                             </div>
                           </div>
-                          <Progress
-                            :model-value="getTaskProgress(task).percent"
-                            class="mt-5 h-2"
-                            :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'"
-                          />
+                          <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
+                            :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
                         </CardContent>
                       </Card>
                     </button>
@@ -417,12 +499,9 @@ watch(
             </div>
 
             <div class="space-y-3">
-              <button
-                type="button"
-                class="w-full text-left"
-                @click="isCompletedSectionOpen = !isCompletedSectionOpen"
-              >
-                <Card class="rounded-[1.6rem] py-3 border-slate-200/80 bg-[#eef2ff] shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)]">
+              <button type="button" class="w-full text-left" @click="isCompletedSectionOpen = !isCompletedSectionOpen">
+                <Card
+                  class="rounded-[1.6rem] py-3 border-slate-200/80 bg-[#eef2ff] shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)]">
                   <CardContent class="flex items-center justify-between p-4">
                     <span class="text-[1.12rem] font-semibold tracking-[-0.03em] text-slate-800">
                       Completed Tasks
@@ -430,61 +509,45 @@ watch(
 
                     <span class="flex items-center gap-2 text-slate-500">
                       <span class="text-sm font-semibold">{{ completedTasks.length }}</span>
-                      <ChevronDown
-                        class="size-4 transition-transform duration-300"
-                        :class="isCompletedSectionOpen ? 'rotate-0' : '-rotate-90'"
-                      />
+                      <ChevronDown class="size-4 transition-transform duration-300"
+                        :class="isCompletedSectionOpen ? 'rotate-0' : '-rotate-90'" />
                     </span>
                   </CardContent>
                 </Card>
               </button>
 
-              <div
-                class="grid transition-all duration-300 ease-out"
-                :class="isCompletedSectionOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'"
-              >
+              <div class="grid transition-all duration-300 ease-out"
+                :class="isCompletedSectionOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'">
                 <div class="overflow-hidden">
                   <p v-if="completedTasks.length === 0" class="px-2 py-3 text-sm text-slate-400">
                     No completed tasks yet.
                   </p>
 
                   <div v-else class="space-y-4 pt-1">
-                    <button
-                      v-for="task in completedTasks"
-                      :key="task.id"
-                      type="button"
-                      class="w-full text-left"
-                      @click="openTaskDetails(task.id)"
-                    >
+                    <button v-for="task in completedTasks" :key="task.id" type="button" class="w-full text-left"
+                      @click="openTaskDetails(task.id)">
                       <Card
                         class="rounded-[1.6rem] border-slate-200/80 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)] transition-transform duration-200 hover:-translate-y-0.5"
-                        :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'"
-                      >
+                        :class="task.completed ? 'bg-[#eef2ff]' : 'bg-white'">
                         <CardContent class="p-4">
                           <div class="flex items-start justify-between gap-3">
-                            <h3
-                              class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
-                              :class="task.completed ? 'text-slate-500' : 'text-slate-800'"
-                            >
+                            <h3 class="min-w-0 flex-1 text-[1.12rem] font-semibold tracking-[-0.03em]"
+                              :class="task.completed ? 'text-slate-500' : 'text-slate-800'">
                               {{ task.title }}
                             </h3>
                             <div class="flex items-center gap-2">
-                              <span class="text-sm font-semibold" :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
+                              <span class="text-sm font-semibold"
+                                :class="task.completed ? 'text-slate-500' : 'text-blue-500'">
                                 {{ getTaskProgress(task).completedCount }}/{{ getTaskProgress(task).totalCount }}
                               </span>
-                              <span
-                                v-if="task.completed"
-                                class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white"
-                              >
+                              <span v-if="task.completed"
+                                class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white">
                                 <Check class="size-3.5 stroke-[3]" />
                               </span>
                             </div>
                           </div>
-                          <Progress
-                            :model-value="getTaskProgress(task).percent"
-                            class="mt-5 h-2"
-                            :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'"
-                          />
+                          <Progress :model-value="getTaskProgress(task).percent" class="mt-5 h-2"
+                            :indicator-class="task.completed ? 'bg-slate-400' : 'bg-blue-500'" />
                         </CardContent>
                       </Card>
                     </button>

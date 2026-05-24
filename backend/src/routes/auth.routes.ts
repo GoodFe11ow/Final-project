@@ -11,6 +11,8 @@ import { publicUserSelect } from "../lib/public-user-select.js";
 
 
 const authRouter = Router();
+const DEMO_USER_EMAIL = "demo@productivity.app"
+const DEMO_USER_NAME = "Demo User"
 
 //User registration
 authRouter.post("/auth/register", async (req, res, next) =>{
@@ -124,5 +126,51 @@ authRouter.get("/auth/me", requireAuth, (req, res) => {
         ok: true,
         data: req.user,
     })
+})
+
+//Demo user
+authRouter.post("/auth/demo", async (req, res, next) => {
+    try {
+        if(!env.DEMO_MODE) {
+            return res.status(404).json({
+                ok: false,
+                message: "Not found"
+            });
+        }
+
+        let user = await prisma.user.findUnique({
+            where: {
+                email: DEMO_USER_EMAIL,
+            },
+            select: publicUserSelect,
+        });
+
+        if(!user) {
+            user = await prisma.user.create({
+                data: {
+                    name: DEMO_USER_NAME,
+                    email: DEMO_USER_EMAIL,
+                    passwordHash: await bcrypt.hash(crypto.randomUUID(), 10),
+                },
+                select: publicUserSelect,
+            });
+        }
+
+        const token = jwt.sign(
+            { userId: user.id },
+            env.APP_JWT_SECRET,
+            { expiresIn: "7d" }, 
+        );
+
+        return res.status(200).json({
+            ok: true,
+            data: {
+                token,
+                user,
+            },
+        });
+    } catch (error) {
+        return next(error);
+    }
 })
 export default authRouter;

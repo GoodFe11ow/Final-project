@@ -84,13 +84,19 @@ function waitForGoogleClient() {
       return
     }
 
-    const maxAttempts = 50
     let attempts = 0
+    const maxAttempts = 50
 
     const intervaId = window.setInterval(() => {
       attempts += 1
 
       if (window.google?.accounts?.id) {
+        window.clearInterval(intervaId)
+        resolve()
+        return
+      }
+
+      if (attempts >= maxAttempts) {
         window.clearInterval(intervaId)
         reject(new Error('Google client failed to load'))
       }

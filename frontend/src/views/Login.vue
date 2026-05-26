@@ -16,6 +16,7 @@ const password = ref('')
 const errorMessage = ref('')
 const isSubmitting = ref(false)
 const isDemoSubmitting = ref(false)
+const isDemoModeEnabled = import.meta.env.VITE_DEMO_MODE === 'true'
 
 async function handleDemoLogin() {
   if (isSubmitting.value || isDemoSubmitting.value) return
@@ -91,7 +92,7 @@ async function handleSubmit() {
           <LoaderCircle v-if="isSubmitting" class="size-4 animate-spin" />
           {{ isSubmitting ? 'Logging in...' : 'Log in' }}
         </Button>
-        <Button type="button" variant="outline" :disabled="isSubmitting || isDemoSubmitting"
+        <Button v-if="isDemoModeEnabled" type="button" variant="outline" :disabled="isSubmitting || isDemoSubmitting"
           class="h-12 w-full rounded-xl border-blue-200 text-base font-medium text-blue-500 hover:bg-blue-50 hover:text-blue-600"
           @click="handleDemoLogin">
           <LoaderCircle v-if="isDemoSubmitting" class="size-4 animate-spin" />

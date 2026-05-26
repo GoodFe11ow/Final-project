@@ -196,7 +196,7 @@ authRouter.post("/auth/google", async (req, res, next) => {
 
         const payload = ticket.getPayload();
 
-        if(!payload?.sub || !payload.email || payload.email_verified !== true) {
+        if (!payload?.sub || !payload.email || payload.email_verified !== true) {
             return res.status(401).json({
                 ok: false,
                 message: "Invalid Google account"
@@ -212,7 +212,7 @@ authRouter.post("/auth/google", async (req, res, next) => {
             select: publicUserSelect,
         });
 
-        if(!user) {
+        if (!user) {
             const existingUserByEmail = await prisma.user.findUnique({
                 where: { email },
                 select: {
@@ -221,7 +221,7 @@ authRouter.post("/auth/google", async (req, res, next) => {
                 },
             });
 
-            if(existingUserByEmail) {
+            if (existingUserByEmail) {
                 user = await prisma.user.update({
                     where: { id: existingUserByEmail.id },
                     data: { googleId },
@@ -241,7 +241,7 @@ authRouter.post("/auth/google", async (req, res, next) => {
         }
 
         const token = jwt.sign(
-            { userId: user?.id },
+            { userId: user.id },
             env.APP_JWT_SECRET,
             { expiresIn: "7d" },
         );

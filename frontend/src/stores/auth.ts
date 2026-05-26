@@ -18,7 +18,7 @@ type LoginResponse = {
 }
 
 type MeResponse = {
-    ok:  true
+    ok: true
     data: AuthUser
 }
 
@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
         isAuthenticated: (state) => Boolean(state.token),
     },
     actions: {
-        async login (payload: { email: string; password: string}) {
+        async login(payload: { email: string; password: string }) {
             const response = await apiRequest<LoginResponse>('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify(payload),
@@ -54,7 +54,7 @@ export const useAuthStore = defineStore('auth', {
                 this.user = response.data
             } catch {
                 this.logout()
-          }
+            }
         },
         logout() {
             this.token = ''
@@ -65,6 +65,17 @@ export const useAuthStore = defineStore('auth', {
         async loginAsDemo() {
             const response = await apiRequest<LoginResponse>('/auth/demo', {
                 method: 'POST',
+            })
+
+            this.token = response.data.token
+            this.user = response.data.user
+
+            localStorage.setItem(TOKEN_KEY, response.data.token)
+        },
+        async loginWithGoogle(credential: string) {
+            const response = await apiRequest<LoginResponse>('/auth/google', {
+                method: 'POST',
+                body: JSON.stringify({ credential }),
             })
 
             this.token = response.data.token

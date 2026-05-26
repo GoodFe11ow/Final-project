@@ -81,24 +81,6 @@ async function handleSubmit() {
   }
 }
 
-async function handleGoogleCredential(response: { credential?: string }) {
-  if (!response.credential || isSubmitting.value || isGoogleSubmitting.value) return
-
-  errorMessage.value = ''
-
-  try {
-    isGoogleSubmitting.value = true
-
-    await authStore.loginWithGoogle(response.credential)
-
-    router.push('/home')
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Google login failed'
-  } finally {
-    isGoogleSubmitting.value = false
-  }
-}
-
 function waitForGoogleClient() {
   return new Promise<void>((resolve, reject) => {
     if (window.google?.accounts?.id) {
@@ -119,6 +101,25 @@ function waitForGoogleClient() {
     }, 100)
   })
 }
+
+async function handleGoogleCredential(response: { credential?: string }) {
+  if (!response.credential || isSubmitting.value || isGoogleSubmitting.value) return
+
+  errorMessage.value = ''
+
+  try {
+    isGoogleSubmitting.value = true
+
+    await authStore.loginWithGoogle(response.credential)
+
+    router.push('/home')
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Google login failed'
+  } finally {
+    isGoogleSubmitting.value = false
+  }
+}
+
 
 onMounted(async () => {
   if (!googleClientId) return

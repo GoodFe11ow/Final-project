@@ -820,10 +820,10 @@ watch(
           <div class="flex flex-col items-center gap-3">
             <Button type="button" variant="ghost"
               class="size-[5.8rem] rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" @click="stopSession">
-              <Square class="size-7" />
+              <Square class="!size-7" />
             </Button>
             <span class="text-[1rem] font-semibold uppercase tracking-[0.12em] text-slate-600">
-              Stop
+              End session
             </span>
           </div>
 
@@ -831,8 +831,8 @@ watch(
             <Button type="button" variant="ghost"
               class="size-[5.8rem] rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
               @click="timerState === 'running' ? pauseSession() : resumeSession()">
-              <Pause v-if="timerState === 'running'" class="size-7" />
-              <Play v-else class="size-7 fill-current" />
+              <Pause v-if="timerState === 'running'" class="!size-7" />
+              <Play v-else class="!size-7 fill-current" />
             </Button>
             <span class="text-[1rem] font-semibold uppercase tracking-[0.12em] text-slate-600">
               {{ timerState === 'running' ? 'Pause' : 'Resume' }}

@@ -272,11 +272,8 @@ function commpareAssignedDate(left: TaskItem, right: TaskItem, direction: 'asc' 
               <Card
                 class="rounded-[1.6rem] py-3 border-slate-200/80 bg-white shadow-[0_18px_40px_-32px_rgba(15,23,42,0.32)]">
                 <CardContent class="flex items-center justify-between gap-3 p-4">
-                  <button
-                    type="button"
-                    class="flex min-w-0 flex-1 items-center justify-between text-left"
-                    @click="isActiveSectionOpen = !isActiveSectionOpen"
-                  >
+                  <button type="button" class="flex min-w-0 flex-1 items-center justify-between text-left"
+                    @click="isActiveSectionOpen = !isActiveSectionOpen">
                     <span class="text-[1.12rem] font-semibold tracking-[-0.03em] text-slate-800">
                       Active Tasks
                     </span>
@@ -290,12 +287,9 @@ function commpareAssignedDate(left: TaskItem, right: TaskItem, direction: 'asc' 
 
                   <DropdownMenu>
                     <DropdownMenuTrigger as-child>
-                      <Button
-                        type="button"
-                        variant="outline"
+                      <Button type="button" variant="outline"
                         class="h-9 rounded-full border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                        :title="activeTaskSortLabel"
-                      >
+                        :title="activeTaskSortLabel">
                         <ArrowUpDown class="mr-2 size-4 shrink-0 text-slate-500" />
                         Sort
                       </Button>
@@ -448,7 +442,8 @@ function commpareAssignedDate(left: TaskItem, right: TaskItem, direction: 'asc' 
           </h2>
 
           <Button type="button" variant="ghost" size="icon-lg"
-            class="rounded-full text-blue-500 bg-[#F1F6FF] hover:bg-blue-50 hover:text-blue-600" @click="openEditDialog">
+            class="rounded-full text-blue-500 bg-[#F1F6FF] hover:bg-blue-50 hover:text-blue-600"
+            @click="openEditDialog">
             <Pencil class="!size-6" />
           </Button>
         </header>
@@ -477,12 +472,13 @@ function commpareAssignedDate(left: TaskItem, right: TaskItem, direction: 'asc' 
                   <Checkbox v-else :model-value="subtask.completed" :disabled="isCompletingTask"
                     @update:model-value="toggleSelectedSubtask(subtask.id)" />
                 </div>
-                <span class="text-[1.02rem]" :class="[
-                  subtask.completed ? 'text-slate-400 line-through' : 'text-slate-700',
-                  isSubtaskPending(subtask.id) ? 'opacity-60' : '',
-                ]">
+                <button type="button"
+                  class="min-w-0 flex-1 text-left text-[1.02rem] transition-colors disabled:cursor-not-allowed" :class="[
+                    subtask.completed ? 'text-slate-400 line-through' : 'text-slate-700',
+                    isSubtaskPending(subtask.id) ? 'opacity-60' : '',
+                  ]" :disabled="isCompletingTask || isSubtaskPending(subtask.id)" @click="toggleSelectedSubtask(subtask.id)">
                   {{ subtask.title }}
-                </span>
+                </button>
               </div>
 
               <p v-if="selectedTask.subtasks.length === 0" class="text-sm text-slate-400">
@@ -524,13 +520,8 @@ function commpareAssignedDate(left: TaskItem, right: TaskItem, direction: 'asc' 
           {{ isDeletingTask ? 'Deleting...' : 'Delete Task' }}
         </Button>
       </template>
-      <TaskEditorDialog
-      :open="isDialogOpen"
-      :mode="dialogMode ?? 'create'"
-      :task="selectedTask"
-      @update:open="isDialogOpen = $event"
-      @saved = 'tasksStore.fetchTasks()'
-      />
+      <TaskEditorDialog :open="isDialogOpen" :mode="dialogMode ?? 'create'" :task="selectedTask"
+        @update:open="isDialogOpen = $event" @saved='tasksStore.fetchTasks()' />
     </section>
   </AppShell>
 </template>

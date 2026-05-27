@@ -30,6 +30,8 @@ const tasksStore = useTasksStore()
 const statsStore = useStatsStore()
 const { tasks } = storeToRefs(tasksStore)
 const { streakDays, isLoadingSummary } = storeToRefs(statsStore)
+const MIN_ELAPSED_MS_TO_SAVE = 60_000
+
 
 type FocusModeId = 'focus' | 'break'
 type TimerState = 'idle' | 'running' | 'paused' | 'completed'
@@ -77,6 +79,10 @@ const route = useRoute()
 const router = useRouter()
 const settingsStore = useSettingStore()
 const { settings } = storeToRefs(settingsStore)
+
+const circleRadius = 138
+const circleCircumference = 2 * Math.PI * circleRadius
+
 const modes = computed<FocusMode[]>(() => [
   {
     id: 'focus',
@@ -98,9 +104,6 @@ const modes = computed<FocusMode[]>(() => [
   },
 ])
 
-const circleRadius = 138
-const circleCircumference = 2 * Math.PI * circleRadius
-
 const taskIndex = ref(0)
 const selectedMode = ref<FocusModeId>('focus')
 const timerState = ref<TimerState>('idle')
@@ -114,12 +117,18 @@ const animationNowMs = ref(Date.now())
 const sessionSummary = ref<SessionSummary | null>(null)
 const isFocusDurationDialogOpen = ref(false)
 const isTaskDropdownOpen = ref(false)
+const sessionSaveError = ref('')
+
+
 
 const currentMode = computed(() => getModeConfig(selectedMode.value))
+
 const currentFocusTask = computed(() => {
   return focusTasks.value[taskIndex.value] ?? focusTasks.value[0]
 })
+
 const currentTask = computed(() => currentFocusTask.value?.title ?? 'Focus session')
+
 const hideAppChrome = computed(() => {
   return timerState.value === 'running' || timerState.value === 'paused'
 })
@@ -154,10 +163,6 @@ const completedSessionLengthLabel = computed(() => {
   if (!sessionSummary.value) return '0 MIN'
 
   return formatDurationSummary(sessionSummary.value.actualElapsedMs)
-})
-
-const stoppedSessionTitle = computed(() => {
-  return sessionSummary.value?.mode === 'break' ? 'Break Stopped' : 'Focus Stopped'
 })
 
 const isCompletedFocusSuccess = computed(() => {
@@ -243,10 +248,65 @@ const focusTasks = computed(() => {
       title: task.title.trim(),
     }))
     .filter((task) => task.title.length > 0)
-  
+
   return activeTasks.length > 0
     ? activeTasks
-    : [{id: null, title: 'General Focus Session'}]
+    : [{ id: null, title: 'General Focus Session' }]
+})
+
+const wasSessionSavedToStats = computed(() => {
+  if (!sessionSummary.value) return false
+
+  return shouldPersistSession(sessionSummary.value)
+})
+
+const sessionResultTitle = computed(() => {
+  if (!sessionSummary.value) return 'Session finished'
+
+  if (sessionSummary.value.completionType === 'completed-normally') {
+    return 'Session completed'
+  }
+
+  return 'Session stopped early'
+})
+
+const sessionSaveStatusText = computed(() => {
+  if (!sessionSummary.value) return ''
+
+  if (sessionSaveError.value) {
+    return 'Failed to save focus session'
+  }
+
+  if (
+    sessionSummary.value.completionType === 'stopped-early' &&
+    !wasSessionSavedToStats.value
+  ) {
+    return 'Not added to your stats'
+  }
+
+  return ''
+})
+
+const sessionResultHint = computed(() => {
+  if (!sessionSummary.value) return ''
+
+  if (
+    sessionSummary.value.completionType === 'stopped-early' &&
+    !wasSessionSavedToStats.value
+  ) {
+    return 'Sessions shorter than 1 minute are not saved.'
+  }
+
+  return ''
+})
+
+const isShortUnsavedStoppedSession = computed(() => {
+  if (!sessionSummary.value) return false
+
+  return (
+    sessionSummary.value.completionType === 'stopped-early' &&
+    !wasSessionSavedToStats.value
+  )
 })
 
 function getTaskIndexById(taskId: string | null) {
@@ -280,10 +340,10 @@ function formatDurationSummary(durationMs: number) {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
 
-  if (seconds === 0) return `${minutes} MIN`
-  if (minutes === 0) return `${seconds} SEC`
+  if (seconds === 0) return `${minutes} min`
+  if (minutes === 0) return `${seconds} sec`
 
-  return `${minutes}M ${String(seconds).padStart(2, '0')}S`
+  return `${minutes} m ${String(seconds).padStart(2, '0')} s`
 }
 
 function clearTickInterval() {
@@ -344,8 +404,8 @@ function finalizeSession(
   sessionSummary.value = summary
   timerState.value = 'completed'
 
-  if (completionType === 'completed-normally') {
-    void persistCompletedSession(summary)
+  if (shouldPersistSession(summary)) {
+    void persistFocusSession(summary)
   }
 }
 
@@ -415,7 +475,7 @@ function handleTaskSelect(nextTaskIndex: number) {
   if (timerState.value !== 'idle') return
 
   taskIndex.value = normalizeTaskIndex(nextTaskIndex)
-   void persistCurrentTask()
+  void persistCurrentTask()
   isTaskDropdownOpen.value = false
 }
 
@@ -467,7 +527,7 @@ function stopSession() {
   finalizeSession('stopped-early', elapsedNow)
 }
 
- async function persistCurrentTask() {
+async function persistCurrentTask() {
   const nextTaskId = currentFocusTask.value.id ?? null
 
   if (settings.value.lastUsedFocusTaskId === nextTaskId) return
@@ -484,8 +544,8 @@ function openFocusDurationDialog() {
   isFocusDurationDialogOpen.value = true
 }
 
- async function updateFocusDuration(nextValue: number) {
-  if(selectedMode.value === 'focus') {
+async function updateFocusDuration(nextValue: number) {
+  if (selectedMode.value === 'focus') {
     await settingsStore.updateSettings({
       focusDurationSeconds: nextValue,
     })
@@ -520,16 +580,14 @@ function consumeHomeEntryIntent() {
   void router.replace({ path: route.path })
 }
 
-const sessionSaveError = ref('')
-
-async function persistCompletedSession(summary: SessionSummary) {
-  if(!authStore.token || sessionStartedAtMs.value === null) return
+async function persistFocusSession(summary: SessionSummary) {
+  if (!authStore.token || sessionStartedAtMs.value === null) return
 
   isSavingSession.value = true
   sessionSaveError.value = ''
 
   try {
-     await apiRequest<CreateFocusSessionResponse>('/focus-sessions', {
+    await apiRequest<CreateFocusSessionResponse>('/focus-sessions', {
       method: 'POST',
       token: authStore.token,
       body: JSON.stringify({
@@ -541,15 +599,15 @@ async function persistCompletedSession(summary: SessionSummary) {
         startedAt: new Date(sessionStartedAtMs.value).toISOString(),
         endedAt: new Date().toISOString(),
       } satisfies CreateFocusSessionPayload)
-     })
+    })
 
-     await statsStore.fetchSummary({ force: true })
+    await statsStore.fetchSummary({ force: true })
   } catch (error) {
     sessionSaveError.value =
       error instanceof Error ? error.message : 'Failed to save focus session'
     console.error('Failed to save focus session', error)
-  } 
-  finally  {
+  }
+  finally {
     isSavingSession.value = false
   }
 }
@@ -561,6 +619,14 @@ function returnToFocus() {
 
 function goToStats() {
   router.push('/stats')
+}
+
+function shouldPersistSession(summary: SessionSummary) {
+  if (summary.completionType === 'completed-normally') {
+    return true
+  }
+
+  return summary.actualElapsedMs >= MIN_ELAPSED_MS_TO_SAVE
 }
 
 onBeforeUnmount(() => {
@@ -592,45 +658,36 @@ watch(
 )
 
 watch(
-() => [focusTasks.value, settings.value.lastUsedFocusTaskId] as const,
-() => {
-  if(timerState.value !== 'idle') return
+  () => [focusTasks.value, settings.value.lastUsedFocusTaskId] as const,
+  () => {
+    if (timerState.value !== 'idle') return
 
-  taskIndex.value = getTaskIndexById(settings.value.lastUsedFocusTaskId)
-},
-{
-  immediate: true
-}
+    taskIndex.value = getTaskIndexById(settings.value.lastUsedFocusTaskId)
+  },
+  {
+    immediate: true
+  }
 )
 </script>
 
 <template>
   <AppShell :chrome-hidden="hideAppChrome">
     <section class="flex flex-1 flex-col gap-6 pb-2 pt-3">
-      <header
-        v-if="timerState === 'idle' || timerState === 'running' || timerState === 'paused'"
-        class="space-y-3 px-1 pt-1 text-center"
-      >
+      <header v-if="timerState === 'idle' || timerState === 'running' || timerState === 'paused'"
+        class="space-y-3 px-1 pt-1 text-center">
         <h2 class="text-[2.05rem] font-semibold uppercase tracking-[0.2em] text-slate-900">
           {{ headerText.title }}
         </h2>
-        <p
-          class="min-h-[1.6rem] text-[1.02rem] font-medium uppercase tracking-[0.16em] text-blue-500 transition-opacity duration-200"
-          :class="headerText.subtitle ? 'opacity-100' : 'opacity-0'"
-        >
+        <p class="min-h-[1.6rem] text-[1.02rem] font-medium uppercase tracking-[0.16em] text-blue-500 transition-opacity duration-200"
+          :class="headerText.subtitle ? 'opacity-100' : 'opacity-0'">
           {{ headerText.subtitle || '\u00A0' }}
         </p>
       </header>
 
       <template v-if="timerState === 'idle'">
-        <div
-          v-if="currentMode.id === 'focus'"
-          class="relative"
-          :class="isTaskDropdownOpen ? 'z-40' : ''"
-        >
+        <div v-if="currentMode.id === 'focus'" class="relative" :class="isTaskDropdownOpen ? 'z-40' : ''">
           <Card
-            class="overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(59,130,246,0.28)]"
-          >
+            class="overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_24px_60px_-34px_rgba(59,130,246,0.28)]">
             <CardContent class="flex items-center gap-4 p-5">
               <div class="min-w-0 flex-1">
                 <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -641,56 +698,37 @@ watch(
                 </h3>
               </div>
 
-              <Button
-                type="button"
-                variant="ghost"
+              <Button type="button" variant="ghost"
                 class="h-16 rounded-[1.15rem] bg-slate-100 px-5 text-base font-medium text-slate-600 hover:bg-slate-100/90"
-                @click="handleChangeTask"
-              >
+                @click="handleChangeTask">
                 Change
-                <ChevronRight
-                  class="size-4 transition-transform duration-200"
-                  :class="isTaskDropdownOpen ? 'rotate-90' : ''"
-                />
+                <ChevronRight class="size-4 transition-transform duration-200"
+                  :class="isTaskDropdownOpen ? 'rotate-90' : ''" />
               </Button>
             </CardContent>
           </Card>
 
-          <Transition
-            enter-active-class="transition duration-220 ease-out"
-            enter-from-class="translate-y-2 scale-[0.98] opacity-0"
-            enter-to-class="translate-y-0 scale-100 opacity-100"
-            leave-active-class="transition duration-180 ease-in"
-            leave-from-class="translate-y-0 scale-100 opacity-100"
-            leave-to-class="translate-y-1 scale-[0.985] opacity-0"
-          >
-            <div
-              v-if="isTaskDropdownOpen"
-              class="absolute inset-x-0 top-[calc(100%-0.75rem)] z-40 overflow-hidden rounded-[1.65rem] border border-slate-200/80 bg-white px-3 pb-3 pt-5 shadow-[0_28px_80px_-30px_rgba(15,23,42,0.32)]"
-            >
+          <Transition enter-active-class="transition duration-220 ease-out"
+            enter-from-class="translate-y-2 scale-[0.98] opacity-0" enter-to-class="translate-y-0 scale-100 opacity-100"
+            leave-active-class="transition duration-180 ease-in" leave-from-class="translate-y-0 scale-100 opacity-100"
+            leave-to-class="translate-y-1 scale-[0.985] opacity-0">
+            <div v-if="isTaskDropdownOpen"
+              class="absolute inset-x-0 top-[calc(100%-0.75rem)] z-40 overflow-hidden rounded-[1.65rem] border border-slate-200/80 bg-white px-3 pb-3 pt-5 shadow-[0_28px_80px_-30px_rgba(15,23,42,0.32)]">
               <div class="space-y-1">
                 <p class="px-2 pb-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
                   Select Task
                 </p>
-                <button
-                  v-for="task in focusTaskOptions"
-                  :key="`${task.index}-${task.title}`"
-                  type="button"
+                <button v-for="task in focusTaskOptions" :key="`${task.index}-${task.title}`" type="button"
                   class="flex w-full items-center justify-between rounded-[1rem] px-3 py-3 text-left transition-colors"
-                  :class="
-                    task.isSelected
-                      ? 'bg-[#eef4ff] text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
-                  "
-                  @click="handleTaskSelect(task.index)"
-                >
+                  :class="task.isSelected
+                    ? 'bg-[#eef4ff] text-blue-600'
+                    : 'text-slate-700 hover:bg-slate-50'
+                    " @click="handleTaskSelect(task.index)">
                   <span class="min-w-0 flex-1 truncate text-sm font-semibold">
                     {{ task.title }}
                   </span>
-                  <span
-                    class="ml-3 flex size-5 shrink-0 items-center justify-center rounded-full"
-                    :class="task.isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 text-transparent'"
-                  >
+                  <span class="ml-3 flex size-5 shrink-0 items-center justify-center rounded-full"
+                    :class="task.isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 text-transparent'">
                     <Check class="size-3 stroke-[3]" />
                   </span>
                 </button>
@@ -701,8 +739,7 @@ watch(
 
         <div class="flex justify-center pt-2">
           <div
-            class="relative flex aspect-square w-full max-w-[16.25rem] items-center justify-center rounded-full border-[6px] border-blue-500 bg-white shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.22)]"
-          >
+            class="relative flex aspect-square w-full max-w-[16.25rem] items-center justify-center rounded-full border-[6px] border-blue-500 bg-white shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.22)]">
             <div class="flex flex-col items-center text-center">
               <div class="text-[3.55rem] font-light leading-none tracking-[-0.08em] text-slate-900">
                 {{ timerPrimaryText }}
@@ -714,29 +751,20 @@ watch(
           </div>
         </div>
 
-        <Button
-          type="button"
+        <Button type="button"
           class="mx-auto mt-1 flex h-16 w-full max-w-[18.5rem] items-center justify-center rounded-[1.3rem] bg-blue-500 text-[1.05rem] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_20px_36px_-22px_rgba(59,130,246,0.95)] hover:bg-blue-500/90"
-          @click="startSession"
-        >
+          @click="startSession">
           <Play class="size-5 fill-current" />
           Start Session
         </Button>
 
         <div class="grid grid-cols-2 gap-4 pt-3">
-          <Button
-            v-for="mode in modes"
-            :key="mode.id"
-            type="button"
-            variant="ghost"
+          <Button v-for="mode in modes" :key="mode.id" type="button" variant="ghost"
             class="flex h-auto min-h-[6.15rem] flex-col items-center justify-center gap-1.5 rounded-[1.15rem] border px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
-            :class="
-              mode.id === selectedMode
-                ? 'border-blue-200 bg-blue-50 text-blue-500'
-                : 'border-slate-100 bg-slate-50 text-slate-500'
-            "
-            @click="handleModeSelect(mode.id)"
-          >
+            :class="mode.id === selectedMode
+              ? 'border-blue-200 bg-blue-50 text-blue-500'
+              : 'border-slate-100 bg-slate-50 text-slate-500'
+              " @click="handleModeSelect(mode.id)">
             <component :is="mode.icon" class="size-7 stroke-[1.8]" />
             <span class="text-lg font-semibold uppercase tracking-[0.05em]">
               {{ mode.label }}
@@ -746,10 +774,8 @@ watch(
       </template>
 
       <template v-else-if="timerState === 'running' || timerState === 'paused'">
-        <Card
-          v-if="currentMode.id === 'focus'"
-          class="overflow-hidden rounded-[2rem] border-slate-100 bg-[#f5f8ff] shadow-[0_24px_60px_-34px_rgba(59,130,246,0.22)]"
-        >
+        <Card v-if="currentMode.id === 'focus'"
+          class="overflow-hidden rounded-[2rem] border-slate-100 bg-[#f5f8ff] shadow-[0_24px_60px_-34px_rgba(59,130,246,0.22)]">
           <CardContent class="flex items-center gap-4 p-5">
             <div class="h-16 w-4 rounded-full bg-blue-500/95" />
 
@@ -766,42 +792,20 @@ watch(
 
         <div class="flex justify-center pt-2">
           <div class="relative flex aspect-square w-full max-w-[19.6rem] items-center justify-center">
-            <svg
-              class="absolute inset-0 h-full w-full -rotate-90"
-              viewBox="0 0 320 320"
-              aria-hidden="true"
-            >
-              <circle
-                cx="160"
-                cy="160"
-                :r="circleRadius"
-                fill="none"
-                stroke="rgb(226 232 240)"
-                stroke-width="12"
-              />
-              <circle
-                cx="160"
-                cy="160"
-                :r="circleRadius"
-                fill="none"
-                stroke="rgb(37 99 235)"
-                stroke-linecap="round"
-                stroke-width="12"
-                :stroke-dasharray="circleCircumference"
-                :stroke-dashoffset="progressOffset"
-              />
+            <svg class="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 320 320" aria-hidden="true">
+              <circle cx="160" cy="160" :r="circleRadius" fill="none" stroke="rgb(226 232 240)" stroke-width="12" />
+              <circle cx="160" cy="160" :r="circleRadius" fill="none" stroke="rgb(37 99 235)" stroke-linecap="round"
+                stroke-width="12" :stroke-dasharray="circleCircumference" :stroke-dashoffset="progressOffset" />
             </svg>
 
             <div
-              class="relative flex aspect-square w-[83%] flex-col items-center justify-center rounded-full bg-white text-center shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.18)]"
-            >
+              class="relative flex aspect-square w-[83%] flex-col items-center justify-center rounded-full bg-white text-center shadow-[inset_0_18px_50px_-34px_rgba(59,130,246,0.2),0_22px_55px_-40px_rgba(59,130,246,0.18)]">
               <div class="text-[4.55rem] font-light leading-none tracking-[-0.08em] text-slate-900">
                 {{ timerPrimaryText }}
               </div>
 
               <span
-                class="mt-5 rounded-full bg-blue-50 px-5 py-2 text-[0.95rem] font-semibold uppercase tracking-[0.14em] text-blue-700"
-              >
+                class="mt-5 rounded-full bg-blue-50 px-5 py-2 text-[0.95rem] font-semibold uppercase tracking-[0.14em] text-blue-700">
                 {{ timerState === 'paused' ? 'Paused' : currentMode.sessionBadge }}
               </span>
             </div>
@@ -814,12 +818,8 @@ watch(
 
         <div class="grid grid-cols-2 gap-6 pt-3">
           <div class="flex flex-col items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              class="size-[5.8rem] rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
-              @click="stopSession"
-            >
+            <Button type="button" variant="ghost"
+              class="size-[5.8rem] rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" @click="stopSession">
               <Square class="size-7" />
             </Button>
             <span class="text-[1rem] font-semibold uppercase tracking-[0.12em] text-slate-600">
@@ -828,12 +828,9 @@ watch(
           </div>
 
           <div class="flex flex-col items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
+            <Button type="button" variant="ghost"
               class="size-[5.8rem] rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
-              @click="timerState === 'running' ? pauseSession() : resumeSession()"
-            >
+              @click="timerState === 'running' ? pauseSession() : resumeSession()">
               <Pause v-if="timerState === 'running'" class="size-7" />
               <Play v-else class="size-7 fill-current" />
             </Button>
@@ -865,8 +862,8 @@ watch(
             <p class="mt-4 text-[3.1rem] font-semibold leading-none tracking-[-0.06em] text-blue-600">
               {{ completedSessionLengthLabel }}
             </p>
-            <p class="mt-2 text-[1.05rem] font-semibold uppercase tracking-[0.14em] text-blue-600">
-              Focused
+            <p v-if="sessionSaveStatusText" class="mt-4 text-sm font-medium text-red-500">
+              {{ sessionSaveStatusText }}
             </p>
           </CardContent>
         </Card>
@@ -889,7 +886,8 @@ watch(
         </Card>
 
         <button type="button" class="w-full text-left" @click="goToStats">
-          <Card class="rounded-[1.8rem] border-orange-200/70 bg-[#fff5ec] shadow-[0_18px_40px_-32px_rgba(251,146,60,0.22)]">
+          <Card
+            class="rounded-[1.8rem] border-orange-200/70 bg-[#fff5ec] shadow-[0_18px_40px_-32px_rgba(251,146,60,0.22)]">
             <CardContent class="flex items-center gap-4 p-5">
               <span class="flex size-11 items-center justify-center rounded-full bg-white/80 text-orange-500">
                 <Flame class="size-6" />
@@ -900,10 +898,8 @@ watch(
                   Current Streak
                 </p>
                 <div class="mt-1 flex items-center gap-2">
-                  <LoaderCircle
-                    v-if="isLoadingSummary || isSavingSession"
-                    class="size-5 animate-spin text-orange-400"
-                  />
+                  <LoaderCircle v-if="isLoadingSummary || isSavingSession"
+                    class="size-5 animate-spin text-orange-400" />
                   <p class="text-[2rem] font-semibold leading-none tracking-[-0.04em] text-orange-600">
                     {{ streakDays }} days
                   </p>
@@ -916,58 +912,105 @@ watch(
         </button>
 
         <div class="grid grid-rows gap-4 pt-2">
-          <Button
-            type="button"
-            variant="outline"
+          <Button type="button" variant="outline"
             class="h-16 rounded-[1.2rem] border-slate-200/90 bg-white text-[1.05rem] font-semibold uppercase tracking-[0.06em] text-slate-800 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.2)] hover:bg-white"
-            @click="returnToFocus"
-          >
+            @click="returnToFocus">
             Return to Focus
           </Button>
 
-          <Button
-            type="button"
+          <Button type="button"
             class="h-16 rounded-[1.2rem] bg-blue-600 text-[1.05rem] font-semibold uppercase tracking-[0.06em] text-white shadow-[0_18px_34px_-18px_rgba(37,99,235,0.75)] hover:bg-blue-600/90"
-            @click="goToStats"
-          >
+            @click="goToStats">
             View Stats
           </Button>
         </div>
       </template>
 
-      <template v-else-if="isCompletedStopped">
+      <template v-else-if="isCompletedStopped && sessionSummary">
+        <header class="pt-1 text-center">
+          <h2 class="text-[1.05rem] font-semibold uppercase tracking-[0.2em] text-[#6e84ab]">
+            Focus
+          </h2>
+        </header>
+
         <Card class="rounded-[2rem] border-white/90 bg-white shadow-[0_26px_60px_-38px_rgba(15,23,42,0.14)]">
           <CardContent class="flex flex-col items-center px-6 py-8 text-center">
-            <div class="flex size-[8.8rem] items-center justify-center rounded-full bg-[#f5f7ff] shadow-[inset_0_0_0_12px_rgba(239,243,255,0.95)]">
-              <div class="flex size-[6.2rem] items-center justify-center rounded-full bg-white shadow-[0_0_0_12px_rgba(241,245,249,0.9)]">
-                <TimerOff class="size-10 text-blue-600 stroke-[1.8]" />
+            <div class="flex size-[4.5rem] items-center justify-center rounded-full bg-blue-100">
+              <div class="flex size-8 items-center justify-center rounded-full bg-blue-500">
+                <TimerOff v-if="isShortUnsavedStoppedSession" class="size-4.5 text-white stroke-[2.1]" />
+                <Check v-else class="size-5 text-white" />
               </div>
             </div>
 
-            <h3 class="mt-8 text-[2.15rem] font-semibold uppercase tracking-[-0.05em] text-slate-900">
-              {{ stoppedSessionTitle }}
+            <h3 class="mt-8 text-[2rem] font-semibold uppercase tracking-[-0.05em] text-slate-900">
+              {{ sessionResultTitle }}
             </h3>
-            <p class="mt-5 max-w-[15.5rem] text-[1rem] leading-relaxed text-slate-500">
-              This session wasn't completed, so it won't be added to your statistics.
+            <p class="mt-4 text-[3.1rem] font-semibold leading-none tracking-[-0.06em] text-blue-600">
+              {{ completedSessionLengthLabel }}
+            </p>
+            <p v-if="sessionSaveStatusText" class="mt-4 text-sm font-medium"
+              :class="sessionSaveError ? 'text-red-500' : 'text-slate-500'">
+              {{ sessionSaveStatusText }}
+            </p>
+            <p v-if="sessionResultHint" class="mt-3 max-w-[15.5rem] text-sm leading-relaxed text-slate-400">
+              {{ sessionResultHint }}
             </p>
           </CardContent>
         </Card>
 
-        <div class="space-y-4 pt-4">
-          <Button
-            type="button"
-            class="h-16 w-full rounded-[1.3rem] bg-blue-600 text-[1.05rem] font-semibold text-white shadow-[0_20px_36px_-22px_rgba(37,99,235,0.8)] hover:bg-blue-600/90"
-            @click="returnToFocus"
-          >
+        <Card class="rounded-[1.7rem] border-white/90 bg-white shadow-[0_18px_40px_-32px_rgba(15,23,42,0.12)]">
+          <CardContent class="flex items-center gap-4 p-5">
+            <span class="flex size-12 items-center justify-center rounded-[1rem] bg-[#edf4ff] text-blue-600">
+              <ClipboardList class="size-6" />
+            </span>
+
+            <div class="min-w-0 flex-1">
+              <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Task
+              </p>
+              <h3 class="mt-2 text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-800">
+                {{ sessionSummary.task }}
+              </h3>
+            </div>
+          </CardContent>
+        </Card>
+
+        <button type="button" class="w-full text-left" @click="goToStats">
+          <Card
+            class="rounded-[1.8rem] border-orange-200/70 bg-[#fff5ec] shadow-[0_18px_40px_-32px_rgba(251,146,60,0.22)]">
+            <CardContent class="flex items-center gap-4 p-5">
+              <span class="flex size-11 items-center justify-center rounded-full bg-white/80 text-orange-500">
+                <Flame class="size-6" />
+              </span>
+
+              <div class="min-w-0 flex-1">
+                <p class="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-orange-400">
+                  Current Streak
+                </p>
+                <div class="mt-1 flex items-center gap-2">
+                  <LoaderCircle v-if="isLoadingSummary || isSavingSession"
+                    class="size-5 animate-spin text-orange-400" />
+                  <p class="text-[2rem] font-semibold leading-none tracking-[-0.04em] text-orange-600">
+                    {{ streakDays }} days
+                  </p>
+                </div>
+              </div>
+
+              <ChevronRight class="size-5 text-orange-400" />
+            </CardContent>
+          </Card>
+        </button>
+
+        <div class="grid grid-rows gap-4 pt-2">
+          <Button type="button" variant="outline"
+            class="h-16 rounded-[1.2rem] border-slate-200/90 bg-white text-[1.05rem] font-semibold uppercase tracking-[0.06em] text-slate-800 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.2)] hover:bg-white"
+            @click="returnToFocus">
             Return to Focus
           </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            class="h-16 w-full rounded-[1.3rem] border-slate-200/90 bg-white text-[1.05rem] font-semibold text-blue-600 shadow-[0_18px_30px_-24px_rgba(15,23,42,0.12)] hover:bg-white"
-            @click="startSession"
-          >
+          <Button type="button"
+            class="h-16 rounded-[1.2rem] bg-blue-600 text-[1.05rem] font-semibold uppercase tracking-[0.06em] text-white shadow-[0_18px_34px_-18px_rgba(37,99,235,0.75)] hover:bg-blue-600/90"
+            @click="startSession">
             Start New Session
           </Button>
         </div>
@@ -982,7 +1025,8 @@ watch(
 
         <Card class="rounded-[2rem] border-white/90 bg-white shadow-[0_26px_60px_-38px_rgba(15,23,42,0.14)]">
           <CardContent class="flex flex-col items-center px-6 py-8 text-center">
-            <div class="flex size-[7.6rem] items-center justify-center rounded-full bg-white shadow-[0_0_0_16px_rgba(241,245,249,0.92)]">
+            <div
+              class="flex size-[7.6rem] items-center justify-center rounded-full bg-white shadow-[0_0_0_16px_rgba(241,245,249,0.92)]">
               <Coffee class="size-12 text-blue-700 stroke-[1.8]" />
             </div>
 
@@ -996,40 +1040,23 @@ watch(
         </Card>
 
         <div class="space-y-5 pt-3">
-          <Button
-            type="button"
+          <Button type="button"
             class="h-16 w-full rounded-[1.3rem] bg-blue-600 text-[1.05rem] font-semibold text-white shadow-[0_20px_36px_-22px_rgba(37,99,235,0.8)] hover:bg-blue-600/90"
-            @click="returnToFocus"
-          >
+            @click="returnToFocus">
             Return to Focus
           </Button>
         </div>
       </template>
     </section>
 
-    <TimerDurationDialog
-      v-model:open="isFocusDurationDialogOpen"
-      :title="focusDurationDialogConfig.title"
-      :description="focusDurationDialogConfig.description"
-      :selected-value="focusDurationDialogConfig.selectedValue"
-      :options="focusDurationDialogConfig.options"
-      @select="updateFocusDuration"
-    />
-    <Transition
-      enter-active-class="transition duration-220 ease-out"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition duration-180 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <button
-        v-if="isTaskDropdownOpen"
-        type="button"
-        class="fixed inset-0 z-30 bg-slate-900/36 backdrop-blur-[4px]"
-        aria-label="Close task dropdown"
-        @click="closeTaskDropdown"
-      />
+    <TimerDurationDialog v-model:open="isFocusDurationDialogOpen" :title="focusDurationDialogConfig.title"
+      :description="focusDurationDialogConfig.description" :selected-value="focusDurationDialogConfig.selectedValue"
+      :options="focusDurationDialogConfig.options" @select="updateFocusDuration" />
+    <Transition enter-active-class="transition duration-220 ease-out" enter-from-class="opacity-0"
+      enter-to-class="opacity-100" leave-active-class="transition duration-180 ease-in" leave-from-class="opacity-100"
+      leave-to-class="opacity-0">
+      <button v-if="isTaskDropdownOpen" type="button" class="fixed inset-0 z-30 bg-slate-900/36 backdrop-blur-[4px]"
+        aria-label="Close task dropdown" @click="closeTaskDropdown" />
     </Transition>
   </AppShell>
 </template>

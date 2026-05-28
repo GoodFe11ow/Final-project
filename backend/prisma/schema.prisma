@@ -13,8 +13,8 @@ datasource db {
 }
 
 model User {
-  id           String @id @default(cuid())
-  email        String @unique
+  id           String  @id @default(cuid())
+  email        String  @unique
   googleId     String? @unique
   name         String
   passwordHash String
@@ -23,6 +23,8 @@ model User {
   focusSessions         FocusSession[]
   settings              UserSettings?
   taskCompletionHistory TaskCompletionHistory[]
+  pushSubscriptions     PushSubscription[]
+  activeFocusTimers     ActiveFocusTimer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -106,4 +108,47 @@ model TaskCompletionHistory {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum ActiveFocusTimerStatus {
+  active
+  paused
+  cancelled
+  completed
+  notified
+}
+
+model PushSubscription {
+  id       String @id @default(cuid())
+  endpoint String @unique
+  p256dh   String
+  auth     String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ActiveFocusTimer {
+  id                String                 @id @default(cuid())
+  sessionKey        String                 
+  task              String
+  plannedDurationMs Int
+  remainingMs       Int
+  scheduledEndAt    DateTime
+  status            ActiveFocusTimerStatus @default(active)
+  notifiedAt        DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, sessionKey])
+  @@index([status, scheduledEndAt])
 }

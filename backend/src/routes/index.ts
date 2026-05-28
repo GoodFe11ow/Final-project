@@ -5,6 +5,7 @@ import authRouter from "./auth.routes.js";
 import focusSessionRouter from "./focus-session.js";
 import statsRouter from "./stats.routes.js";
 import settingsRouter from "./settings.routes.js";
+import pushRouter from "./push.routes.js";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use(tasksRouter);
 router.use(focusSessionRouter);
 router.use(statsRouter);
 router.use(settingsRouter);
+router.use(pushRouter);
 
 export default router;

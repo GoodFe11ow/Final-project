@@ -22,4 +22,7 @@ export const env = {
     APP_JWT_SECRET: requireEnv("APP_JWT_SECRET"),
     DEMO_MODE: process.env.DEMO_MODE === "true",
     GOOGLE_CLIENT_ID: requireEnv("GOOGLE_CLIENT_ID"),
+    VAPID_PUBLIC_KEY: requireEnv("VAPID_PUBLIC_KEY"),
+    VAPID_PRIVATE_KEY: requireEnv("VAPID_PRIVATE_KEY"),
+    VAPID_SUBJECT: requireEnv("VAPID_SUBJECT"),
 };

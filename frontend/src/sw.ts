@@ -31,15 +31,15 @@ function getPushPayload(event: PushEvent) {
     }
 
     try {
-        const parsePayload = event.data.json() as PushPayload;
+        const parsedPayload = event.data.json() as PushPayload;
 
         return {
-            title: parsePayload.title ?? fallbackPayload.title,
-            body: parsePayload.body ?? fallbackPayload.body,
-            tag: parsePayload.tag ?? fallbackPayload.tag,
-            url: parsePayload.url ?? fallbackPayload.url,
+            title: parsedPayload.title ?? fallbackPayload.title,
+            body: parsedPayload.body ?? fallbackPayload.body,
+            tag: parsedPayload.tag ?? fallbackPayload.tag,
+            url: parsedPayload.url ?? fallbackPayload.url,
         }
-    } catch (error) {
+    } catch {
         return fallbackPayload;
     }
 }

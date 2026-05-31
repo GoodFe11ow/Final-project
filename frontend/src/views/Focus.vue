@@ -36,6 +36,27 @@ const MIN_ELAPSED_MS_TO_SAVE = 60_000
 type FocusModeId = 'focus' | 'break'
 type TimerState = 'idle' | 'running' | 'paused' | 'completed'
 type CompletionType = 'completed-normally' | 'stopped-early'
+type ActiveFocusTimerStatus = 'active' | 'paused'
+
+type UpsertActiveFocusTimerPayload = {
+  task: string
+  plannedDurationMs: number
+  remainingMs: number
+  scheduledEndAt: string
+  status: ActiveFocusTimerStatus
+}
+
+type UpsertActiveFocusTimerResponse = {
+  ok: true
+  data: {
+    id: string
+  }
+}
+
+type DeleteActiveFocusTimerResponse = {
+  ok: true
+  data: null
+}
 
 type CreateFocusSessionPayload = {
   mode: FocusModeId
@@ -118,6 +139,7 @@ const sessionSummary = ref<SessionSummary | null>(null)
 const isFocusDurationDialogOpen = ref(false)
 const isTaskDropdownOpen = ref(false)
 const sessionSaveError = ref('')
+const activeFocusSessionKey = ref<string | null>(null)
 
 
 
@@ -346,6 +368,18 @@ function formatDurationSummary(durationMs: number) {
   return `${minutes} m ${String(seconds).padStart(2, '0')} s`
 }
 
+function buildActiveFocusTimerPayload(
+  status: ActiveFocusTimerStatus,
+): UpsertActiveFocusTimerPayload {
+  return {
+    task: currentTask.value,
+    plannedDurationMs: plannedDurationMs.value,
+    remainingMs: remainingMs.value,
+    scheduledEndAt: new Date(Date.now() + remainingMs.value).toISOString(),
+    status,
+  }
+}
+
 function clearTickInterval() {
   if (tickIntervalId.value !== null) {
     window.clearInterval(tickIntervalId.value)
@@ -404,6 +438,12 @@ function finalizeSession(
   sessionSummary.value = summary
   timerState.value = 'completed'
 
+  if (summary.mode === 'focus' && 
+    summary.completionType === 'stopped-early'
+  ) {
+    void clearActiveFocusTimer()
+  }
+
   if (shouldPersistSession(summary)) {
     void persistFocusSession(summary)
   }
@@ -453,6 +493,7 @@ function resetToIdle() {
   plannedDurationMs.value = currentMode.value.durationMs
   remainingMs.value = plannedDurationMs.value
   sessionStartedAtMs.value = null
+  activeFocusSessionKey.value = null
   animationNowMs.value = Date.now()
 }
 
@@ -487,6 +528,7 @@ function startSession() {
   sessionStartedAtMs.value = Date.now()
   animationNowMs.value = Date.now()
   isTaskDropdownOpen.value = false
+
   if (selectedMode.value === 'focus') {
     void persistCurrentTask()
   }
@@ -497,6 +539,14 @@ function startSession() {
   remainingMs.value = plannedDurationMs.value
   runningSinceMs.value = Date.now()
   timerState.value = 'running'
+
+  activeFocusSessionKey.value =
+    selectedMode.value === 'focus' ? crypto.randomUUID() : null
+
+  if (selectedMode.value === 'focus') {
+    void syncActiveFocusTimer('active')
+  }
+
   startTicking()
 }
 
@@ -509,6 +559,8 @@ function pauseSession() {
   timerState.value = 'paused'
   clearTickInterval()
   clearAnimationFrame()
+
+  void syncActiveFocusTimer('paused')
 }
 
 function resumeSession() {
@@ -518,6 +570,8 @@ function resumeSession() {
   runningSinceMs.value = Date.now()
   timerState.value = 'running'
   startTicking()
+
+  void syncActiveFocusTimer('active')
 }
 
 function stopSession() {
@@ -609,6 +663,43 @@ async function persistFocusSession(summary: SessionSummary) {
   }
   finally {
     isSavingSession.value = false
+  }
+}
+
+async function syncActiveFocusTimer(status: ActiveFocusTimerStatus) {
+  const sessionKey = activeFocusSessionKey.value
+
+  if (!authStore.token || !sessionKey || selectedMode.value !== 'focus') return
+
+  try {
+    await apiRequest<UpsertActiveFocusTimerResponse>(
+      `/active-focus-timers/${sessionKey}`,
+      {
+        method: 'PUT',
+        token: authStore.token,
+        body: JSON.stringify(buildActiveFocusTimerPayload(status)),
+      },
+    )
+  } catch (error) {
+    console.error('Failed to sync active focus timer', error)
+  }
+}
+
+async function clearActiveFocusTimer() {
+  const sessionKey = activeFocusSessionKey.value
+
+  if (!authStore.token || !sessionKey) return
+
+  try {
+    await apiRequest<DeleteActiveFocusTimerResponse>(
+      `/active-focus-timers/${sessionKey}`,
+      {
+        method: 'DELETE',
+        token: authStore.token,
+      },
+    )
+  } catch (error) {
+    console.error('Failed to clear active focus timer', error)
   }
 }
 
